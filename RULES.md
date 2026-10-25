@@ -4,9 +4,24 @@
 1. Short, readable, best practice like Anfin (`internal/<domain>`, `pkg/failure`, `pkg/response`).
 2. Follow https://go.dev/doc/effective_go.
 3. No comments in code.
-4. No test files in the repo. Verify with scripts kept outside the repo and SQL invariant checks.
+4. Tests are temporary. Write `*_test.go` (stdlib `testing`, table-driven with `t.Run`; integration tests via `TEST_DATABASE_URL`), run them, record the result in the report, then DELETE every `*_test.go` before commit. No test file is ever committed. Money and state flows also get SQL invariant checks.
 5. No over-engineering. Understand before coding.
 6. Errors go through `failure.ErrWithTrace`. Finite variants use enum type + const.
+
+## Go conventions
+1. Packages: short, lower-case, singular, no underscores; group by domain under `internal/`, entry points in `cmd/`.
+2. Interfaces: defined at the consumer, 1-3 methods, one-method interface named `<Method>er`; none when there is a single implementation. Accept interfaces, return structs.
+3. Errors: last return value, wrapped with `%w` (here via `failure.ErrWithTrace`), sentinel errors named `ErrXxx`, inspected with `errors.Is/As`. Do not log and return the same error. Never ignore an error without reason.
+4. `context.Context` is the first parameter and is never stored in a struct. `defer cancel()` right after creating one. Every goroutine has a stop path.
+5. Initialisms keep case (`ID`, `URL`, `HTTP`); receiver names are 1-2 letters; constants are CamelCase; no `init()` logic.
+6. Logging: `log/slog`, structured fields, every request-scoped line carries `request_id`.
+7. Before each commit: `gofmt -l .` empty, `go mod tidy`, `go vet ./...`, `go build ./...`, `go test ./...` (then delete the test files, see Code #4).
+
+## Git workflow (Gitflow)
+1. Branches: `main` (release history), `dev` (integration). Release and hotfix branches only when needed, same Gitflow rules.
+2. Feature branch: `feature/CM-<n>-<slug>` where `CM-<n>` is the Jira key (CM-2 = https://congnguyen29102002-1792466035836.atlassian.net/browse/CM-2). Cut from `dev`, one ticket per branch.
+3. Commit messages in English, start with the Jira key when the commit is scoped to one ticket.
+4. Merge feature into `dev` only after the Per-ticket gate and user approval. Merge `dev` into `main` only on the user's say-so. Never push without "push đi".
 
 ## Per-ticket gate
 1. Read the ticket: Goal, Scope, Acceptance Criteria.
