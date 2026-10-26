@@ -17,6 +17,10 @@ func Success(ctx *gin.Context, data any) {
 	ctx.JSON(http.StatusOK, Body{Status: http.StatusOK, Data: data})
 }
 
+func Created(ctx *gin.Context, data any) {
+	ctx.JSON(http.StatusCreated, Body{Status: http.StatusCreated, Data: data})
+}
+
 func Err(ctx *gin.Context, code failure.Code) {
 	status := code.HTTPStatus()
 	ctx.JSON(status, Body{Status: status, Data: string(code)})

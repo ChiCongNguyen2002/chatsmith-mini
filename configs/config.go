@@ -21,6 +21,7 @@ type ServerConfig struct {
 	IdleTimeout       time.Duration `mapstructure:"IDLE_TIMEOUT"`
 	MaxHeaderBytes    int           `mapstructure:"MAX_HEADER_BYTES"`
 	ShutdownTimeout   time.Duration `mapstructure:"SHUTDOWN_TIMEOUT"`
+	RequestTimeout    time.Duration `mapstructure:"REQUEST_TIMEOUT"`
 }
 
 type DatabaseConfig struct {
@@ -43,6 +44,7 @@ func (c *Config) validate() error {
 		{KeyServerIdleTimeout, s.IdleTimeout > 0},
 		{KeyServerMaxHeaderBytes, s.MaxHeaderBytes > 0},
 		{KeyServerShutdownTimeout, s.ShutdownTimeout > 0},
+		{KeyServerRequestTimeout, s.RequestTimeout > 0},
 		{KeyDatabaseURL, d.URL != ""},
 		{KeyDatabaseMaxOpenConns, d.MaxOpenConns > 0},
 		{KeyDatabaseMaxIdleConns, d.MaxIdleConns > 0 && d.MaxIdleConns <= d.MaxOpenConns},

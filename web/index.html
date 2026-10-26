@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat Smith Mini</title>
+<style>
+:root {
+  --bg: #0c0c0e;
+  --side: #131316;
+  --surface: #1a1a1f;
+  --border: #2a2a31;
+  --fg: #ececf1;
+  --muted: #8d8d99;
+  --accent: #7c93ff;
+  --accent-soft: #232846;
+  --danger: #ff6b6b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.app { display: grid; grid-template-columns: 280px minmax(0, 1fr); height: 100%; }
+.side { background: var(--side); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+.side-top { padding: 12px; display: grid; gap: 8px; }
+.btn { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 9px 12px; cursor: pointer; text-align: left; }
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.small { padding: 5px 9px; font-size: 12px; }
+.recents { padding: 4px 16px; color: var(--muted); font-size: 13px; }
+.list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 12px; }
+.group { margin: 14px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.item { display: block; width: 100%; background: none; border: 0; color: var(--fg); font: inherit; text-align: left; padding: 8px 10px; border-radius: 8px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item:hover { background: var(--surface); }
+.item.active { background: var(--accent-soft); }
+.item.untitled { color: var(--muted); }
+.more { margin: 8px; }
+.who { padding: 10px 12px; border-top: 1px solid var(--border); display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+.who code { color: var(--fg); word-break: break-all; }
+.who-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.who input { flex: 1 1 120px; min-width: 0; font: inherit; font-size: 12px; color: var(--fg); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; }
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.banner { background: #3a1d1d; color: #ffd0d0; padding: 8px 16px; font-size: 13px; }
+.view { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 16px; }
+.col { max-width: 760px; margin: 0 auto; display: grid; gap: 16px; }
+.hello { margin: 15vh auto 0; max-width: 760px; text-align: left; }
+.hello p { margin: 0; color: var(--muted); }
+.hello h1 { margin: 6px 0 0; font-size: 34px; font-weight: 500; }
+.title { margin: 0; font-size: 18px; font-weight: 600; }
+.meta { color: var(--muted); font-size: 12px; }
+.msg { display: grid; gap: 4px; max-width: 86%; }
+.msg.user { justify-self: end; }
+.bubble { padding: 10px 14px; border-radius: 14px; background: var(--surface); overflow-wrap: anywhere; white-space: pre-wrap; }
+.msg.user .bubble { background: var(--accent-soft); }
+.empty { color: var(--muted); }
+.composer { padding: 12px 16px 16px; }
+.composer .box { max-width: 760px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
+.composer input { flex: 1; min-width: 0; background: none; border: 0; color: var(--fg); font: inherit; outline: none; }
+.foot { padding: 6px 16px; border-top: 1px solid var(--border); color: var(--muted); font: 11px/1.4 ui-monospace, Menlo, monospace; }
+.btn:focus-visible, .item:focus-visible, .who input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 720px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .side { max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--border); }
+  .hello { margin-top: 6vh; }
+  .hello h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="side-top">
+      <button class="btn" id="newChat" type="button">+ New Chat</button>
+    </div>
+    <div class="recents">Recents</div>
+    <div class="list" id="list"></div>
+    <button class="btn more" id="more" type="button" hidden>Load more</button>
+    <div class="who">
+      <div>User ID (X-User-ID tạm, chưa phải đăng nhập)</div>
+      <code id="userId"></code>
+      <div class="who-row">
+        <button class="btn small" id="newUser" type="button">New user</button>
+        <input id="pasteUser" type="text" placeholder="Dán user id" aria-label="Dán user id">
+        <button class="btn small" id="useUser" type="button">Dùng</button>
+      </div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="banner" id="banner" hidden></div>
+    <div class="view" id="view"></div>
+    <div class="composer">
+      <div class="box">
+        <input type="text" placeholder="Talk with Chat Smith (gửi tin nhắn sẽ có ở CM-19)" disabled aria-label="Ô nhập tin nhắn, chưa bật">
+        <button class="btn small" type="button" disabled>Send</button>
+      </div>
+    </div>
+    <div class="foot" id="foot">chưa gọi API nào</div>
+  </main>
+</div>
+<script>
+(function () {
+  var PAGE = 20;
+  var MSG_PAGE = 200;
+  var USER_KEY = "chatsmith_user";
+  var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  var state = { user: loadUser(), items: [], next: null, active: null };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function newUUID() {
+    var b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    var h = Array.prototype.map.call(b, function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+    return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+  }
+  function loadUser() {
+    var id = "";
+    try { id = localStorage.getItem(USER_KEY) || ""; } catch (e) { id = ""; }
+    if (!UUID.test(id)) { id = newUUID(); saveUser(id); }
+    return id;
+  }
+  function saveUser(id) { try { localStorage.setItem(USER_KEY, id); } catch (e) { return; } }
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+  function showError(err) {
+    var box = $("banner");
+    if (!err) { box.hidden = true; return; }
+    box.hidden = false;
+    box.textContent = "Lỗi " + err.status + " " + (err.data || "") + (err.rid ? " · request_id " + err.rid : "");
+  }
+  async function api(method, path, body) {
+    var started = performance.now();
+    var res;
+    try {
+      res = await fetch(path, { method: method, headers: { "X-User-ID": state.user, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+    } catch (e) {
+      showError({ status: 0, data: "không kết nối được máy chủ (" + e.name + ")", rid: "" });
+      return null;
+    }
+    var ms = Math.round(performance.now() - started);
+    var rid = res.headers.get("X-Request-Id") || "";
+    var json = null;
+    try { json = await res.json(); } catch (e) { json = null; }
+    $("foot").textContent = method + " " + path.split("?")[0] + " · " + ms + " ms · " + res.status + (rid ? " · " + rid : "");
+    if (!res.ok) {
+      showError({ status: res.status, data: json && json.data, rid: rid });
+      return null;
+    }
+    showError(null);
+    return json.data;
+  }
+  function groupOf(iso) {
+    var d = new Date(iso);
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var days = Math.round((today - day) / 86400000);
+    if (days <= 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days <= 7) return "Previous 7 days";
+    if (days <= 30) return "Previous 30 days";
+    return "Older";
+  }
+  function renderList() {
+    var list = $("list");
+    list.replaceChildren();
+    var last = "";
+    state.items.forEach(function (c) {
+      var g = groupOf(c.updated_at);
+      if (g !== last) { list.append(el("div", "group", g)); last = g; }
+      var b = el("button", "item" + (c.id === state.active ? " active" : "") + (c.title ? "" : " untitled"), c.title || "Untitled");
+      b.type = "button";
+      b.addEventListener("click", function () { openConversation(c.id, true); });
+      list.append(b);
+    });
+    $("more").hidden = !state.next;
+  }
+  async function loadList(more) {
+    var path = "/v1/conversations?limit=" + PAGE + (more && state.next ? "&cursor=" + encodeURIComponent(state.next) : "");
+    var page = await api("GET", path);
+    if (!page) return;
+    state.items = more ? state.items.concat(page.items) : page.items;
+    state.next = page.next_cursor;
+    renderList();
+  }
+  function renderHello() {
+    var view = $("view");
+    view.replaceChildren();
+    var box = el("div", "hello");
+    box.append(el("p", "", "Welcome"), el("h1", "", "How can I help you today?"));
+    view.append(box);
+  }
+  function renderConversation(c, msgs) {
+    var view = $("view");
+    view.replaceChildren();
+    var col = el("div", "col");
+    col.append(el("h2", "title", c.title || "Untitled"), el("div", "meta", "Cập nhật " + new Date(c.updated_at).toLocaleString() + " · " + msgs.length + " tin"));
+    if (msgs.length === 0) col.append(el("p", "empty", "Cuộc trò chuyện chưa có tin nhắn."));
+    msgs.forEach(function (m) {
+      var row = el("div", "msg " + m.role);
+      row.append(el("div", "bubble", m.content));
+      col.append(row);
+    });
+    view.append(col);
+    view.scrollTop = view.scrollHeight;
+  }
+  function closeConversation() {
+    state.active = null;
+    renderHello();
+    renderList();
+  }
+  async function openConversation(id, push) {
+    var c = await api("GET", "/v1/conversations/" + id);
+    if (!c) { closeConversation(); return; }
+    var msgs = [];
+    var after = 0;
+    for (;;) {
+      var batch = await api("GET", "/v1/conversations/" + id + "/messages?after_seq=" + after + "&limit=" + MSG_PAGE);
+      if (!batch) { closeConversation(); return; }
+      msgs = msgs.concat(batch);
+      if (batch.length < MSG_PAGE) break;
+      after = batch[batch.length - 1].seq;
+    }
+    state.active = id;
+    if (push) history.pushState({}, "", "/conversation/" + id);
+    renderConversation(c, msgs);
+    renderList();
+  }
+  function routeFromPath() {
+    var m = location.pathname.match(/^\/conversation\/([0-9a-f-]{36})$/);
+    if (m) openConversation(m[1], false); else { state.active = null; renderHello(); renderList(); }
+  }
+  async function boot() {
+    $("userId").textContent = state.user;
+    state.items = [];
+    state.next = null;
+    await loadList(false);
+    routeFromPath();
+  }
+
+  $("newChat").addEventListener("click", async function () {
+    var c = await api("POST", "/v1/conversations", {});
+    if (!c) return;
+    state.items.unshift(c);
+    await openConversation(c.id, true);
+  });
+  $("more").addEventListener("click", function () { loadList(true); });
+  $("newUser").addEventListener("click", function () {
+    state.user = newUUID();
+    saveUser(state.user);
+    history.pushState({}, "", "/");
+    boot();
+  });
+  $("useUser").addEventListener("click", function () {
+    var id = $("pasteUser").value.trim().toLowerCase();
+    if (!UUID.test(id)) { showError({ status: 400, data: "user id không hợp lệ", rid: "" }); return; }
+    state.user = id;
+    saveUser(id);
+    $("pasteUser").value = "";
+    history.pushState({}, "", "/");
+    boot();
+  });
+  window.addEventListener("popstate", routeFromPath);
+  boot();
+})();
+</script>
+</body>
+</html>
