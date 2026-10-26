@@ -16,6 +16,11 @@ const (
 	CodeBadRequest         Code = "bad_request"
 	CodeUnauthorized       Code = "unauthorized"
 	CodeNotFound           Code = "not_found"
+	CodeModelUnavailable   Code = "model_unavailable"
+	CodeConversationBusy   Code = "conversation_busy"
+	CodeBudgetExceeded     Code = "budget_exceeded"
+	CodeProviderError      Code = "provider_error"
+	CodeProviderTimeout    Code = "provider_timeout"
 )
 
 var httpStatusByCode = map[Code]int{
@@ -24,6 +29,11 @@ var httpStatusByCode = map[Code]int{
 	CodeBadRequest:         http.StatusBadRequest,
 	CodeUnauthorized:       http.StatusUnauthorized,
 	CodeNotFound:           http.StatusNotFound,
+	CodeModelUnavailable:   http.StatusBadRequest,
+	CodeConversationBusy:   http.StatusConflict,
+	CodeBudgetExceeded:     http.StatusTooManyRequests,
+	CodeProviderError:      http.StatusBadGateway,
+	CodeProviderTimeout:    http.StatusGatewayTimeout,
 }
 
 type AppError struct {
