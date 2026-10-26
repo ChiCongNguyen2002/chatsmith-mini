@@ -7,6 +7,7 @@ import (
 
 	"chatsmith-mini/configs"
 	"chatsmith-mini/internal/controller"
+	"chatsmith-mini/internal/conversation"
 	"chatsmith-mini/internal/router"
 	"chatsmith-mini/internal/server"
 	"chatsmith-mini/pkg/databases"
@@ -24,8 +25,13 @@ func Run(cfg *configs.Config) error {
 		return err
 	}
 
-	controllers := &controller.Controllers{HealthCheck: controller.NewHealthCheck(db)}
-	engine := router.New(log, controllers)
+	conversations := conversation.NewModule(&conversation.CreateModuleDTO{DB: db})
+	controllers := &controller.Controllers{
+		Web:          controller.NewWeb(),
+		HealthCheck:  controller.NewHealthCheck(db),
+		Conversation: controller.NewConversation(conversations.Service),
+	}
+	engine := router.New(log, controllers, cfg.Server.RequestTimeout)
 
 	return server.New(cfg.Server, log, engine).Start(ctx)
 }
