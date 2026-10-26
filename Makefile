@@ -1,9 +1,6 @@
-.PHONY: run migrate up down
+.PHONY: run up down
 
 run:
-	go run ./cmd/app
-
-migrate:
 	go run ./cmd/app
 
 up:

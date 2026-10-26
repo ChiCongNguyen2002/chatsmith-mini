@@ -1,17 +1,27 @@
 package failure
 
 import (
-	"errors"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"runtime"
 )
 
-var (
-	ErrNotFound      = errors.New("not found")
-	ErrBadRequest    = errors.New("bad request")
-	ErrInvalidCursor = errors.New("invalid cursor")
-)
+type Code string
+
+const CodeInternal Code = "internal_error"
+
+var httpStatusByCode = map[Code]int{
+	CodeInternal: http.StatusInternalServerError,
+}
+
+func (c Code) HTTPStatus() int {
+	if status, ok := httpStatusByCode[c]; ok {
+		return status
+	}
+
+	return http.StatusInternalServerError
+}
 
 func ErrWithTrace(err error) error {
 	_, file, line, _ := runtime.Caller(1)
