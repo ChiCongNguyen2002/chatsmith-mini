@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 
 	"chatsmith-mini/configs"
 	"chatsmith-mini/constants"
@@ -19,18 +20,23 @@ const (
 )
 
 type Server struct {
-	cfg  configs.ServerConfig
-	log  *slog.Logger
-	http *http.Server
+	cfg           configs.ServerConfig
+	log           *slog.Logger
+	http          *http.Server
+	cancelStreams context.CancelFunc
 }
 
 func New(cfg configs.ServerConfig, log *slog.Logger, handler http.Handler) *Server {
+	baseCtx, cancelStreams := context.WithCancel(context.Background())
+
 	return &Server{
-		cfg: cfg,
-		log: log,
+		cfg:           cfg,
+		log:           log,
+		cancelStreams: cancelStreams,
 		http: &http.Server{
 			Addr:              ":" + strconv.Itoa(cfg.Port),
 			Handler:           handler,
+			BaseContext:       func(net.Listener) context.Context { return baseCtx },
 			ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 			ReadTimeout:       cfg.ReadTimeout,
 			IdleTimeout:       cfg.IdleTimeout,
@@ -40,6 +46,8 @@ func New(cfg configs.ServerConfig, log *slog.Logger, handler http.Handler) *Serv
 }
 
 func (s *Server) Start(ctx context.Context) error {
+	defer s.cancelStreams()
+
 	listener, err := net.Listen(listenNetwork, s.http.Addr)
 	if err != nil {
 		return failure.ErrWithTrace(err)
@@ -57,6 +65,9 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	s.log.Info(logServerShutdown)
+
+	grace := time.AfterFunc(s.cfg.StreamGrace, s.cancelStreams)
+	defer grace.Stop()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), s.cfg.ShutdownTimeout)
 	defer cancel()

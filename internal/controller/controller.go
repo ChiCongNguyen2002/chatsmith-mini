@@ -15,6 +15,8 @@ type Controllers struct {
 	Web          *Web
 	HealthCheck  *HealthCheck
 	Conversation *Conversation
+	Catalog      *Catalog
+	Chat         *Chat
 }
 
 func respondError(ctx *gin.Context, err error) {

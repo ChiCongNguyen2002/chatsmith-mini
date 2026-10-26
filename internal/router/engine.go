@@ -25,8 +25,12 @@ func New(log *slog.Logger, controllers *controller.Controllers, requestTimeout t
 	engine.GET(routeConversationPage, controllers.Web.Index)
 	engine.GET(routeHealthz, controllers.HealthCheck.Check)
 
-	v1 := engine.Group(routeV1, middleware.UserID(), middleware.Timeout(requestTimeout))
-	registerConversation(v1, controllers.Conversation)
+	v1 := engine.Group(routeV1, middleware.UserID())
+	registerChat(v1, controllers.Chat)
+
+	timed := v1.Group("", middleware.Timeout(requestTimeout))
+	registerConversation(timed, controllers.Conversation)
+	registerCatalog(timed, controllers.Catalog)
 
 	return engine
 }
