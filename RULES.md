@@ -1,54 +1,42 @@
 # Working Rules
 
-## Code
-1. Short, readable, best practice like Anfin (`internal/<domain>`, `pkg/failure`, `pkg/response`).
-2. Follow https://go.dev/doc/effective_go.
-3. No comments in code.
-4. Tests are temporary. Write `*_test.go` (stdlib `testing`, table-driven with `t.Run`; integration tests via `TEST_DATABASE_URL`), run them, record the result in the report, then DELETE every `*_test.go` before commit. No test file is ever committed. Money and state flows also get SQL invariant checks.
-5. No over-engineering. Understand before coding.
-6. Errors go through `failure.ErrWithTrace`. Finite variants use enum type + const.
+## Structure (Anfin)
+`cmd/app/main.go` (<=15 lines) | `configs/{config,default,load}.go` + yaml | `constants/` | `internal/app/{app,infra,module}.go` (manual DI) | `internal/<domain>/{module,repo,service,model,dto,constants}.go` | `internal/controller/<domain>.go` | `internal/router/<domain>.go` | `internal/middleware` | `internal/server` | `pkg/{failure,response,logger,databases,uid}`
 
-## Go conventions
-1. Packages: short, lower-case, singular, no underscores; group by domain under `internal/`, entry points in `cmd/`.
-2. Interfaces: defined at the consumer, 1-3 methods, one-method interface named `<Method>er`; none when there is a single implementation. Accept interfaces, return structs.
-3. Errors: last return value, wrapped with `%w` (here via `failure.ErrWithTrace`), sentinel errors named `ErrXxx`, inspected with `errors.Is/As`. Do not log and return the same error. Never ignore an error without reason.
-4. `context.Context` is the first parameter and is never stored in a struct. `defer cancel()` right after creating one. Every goroutine has a stop path.
-5. Initialisms keep case (`ID`, `URL`, `HTTP`); receiver names are 1-2 letters; constants are CamelCase; no `init()` logic.
-6. Logging: `log/slog`, structured fields, every request-scoped line carries `request_id`.
-7. Before each commit: `gofmt -l .` empty, `go mod tidy`, `go vet ./...`, `go build ./...`, `go test ./...` (then delete the test files, see Code #4).
+## Domain
+1. `NewModule(dto *CreateModuleDTO) *Module`; `newRepo`/`newService` unexported; return structs.
+2. Interface only with 2+ implementations, defined at the consumer, 1-3 methods; one method is named `<Method>er`.
+3. Repo uses GORM and `WithTx` for transactions. Raw SQL only where GORM cannot express it (LATERAL, FILTER), as a named const.
 
-## Git workflow (Gitflow)
-1. Branches: `main` (release history), `dev` (integration). Release and hotfix branches only when needed, same Gitflow rules.
-2. Feature branch: `feature/CM-<n>-<slug>` where `CM-<n>` is the Jira key (CM-2 = https://congnguyen29102002-1792466035836.atlassian.net/browse/CM-2). Cut from `dev`, one ticket per branch.
-3. Commit messages in English, start with the Jira key when the commit is scoped to one ticket.
-4. Merge feature into `dev` only after the Per-ticket gate and user approval. Merge `dev` into `main` only on the user's say-so. Never push without "push đi".
+## Clean
+1. No hard string or number. Header, context key, event, provider, status, error code, table name are const or enum type. Numbers live in config. Adding a provider, model, error code, route or plan is one registry line.
+2. No dead code, no comments. File <=200 lines, func <=40 lines. Same logic twice goes to one place. Write nothing unused yet.
+3. Names say what the thing does; one function does one job.
+
+## Errors and logs
+1. Error codes are enum values in `pkg/failure`. Wrap with `failure.ErrWithTrace` only where the error is born or crosses an outside boundary (repo/DB, provider/HTTP, config); upper layers return it unchanged. Handlers answer through one helper in `pkg/response`.
+2. Never log and return the same error. Never ignore an error without a reason.
+3. `log/slog` with structured fields; every request-scoped line carries `request_id` from the context.
+
+## Go
+1. Packages: short, lower-case, singular, no underscores. Initialisms keep case (`ID`, `URL`). Receivers 1-2 letters. Constants CamelCase. Unused params start with `_`. No `init()` logic.
+2. `context.Context` first, never stored in a struct. `defer cancel()` right after creating one. Every goroutine has a stop path.
+3. Follow https://go.dev/doc/effective_go.
+
+## Tests
+Temporary. Write `*_test.go` (stdlib, table-driven with `t.Run`; DB tests via `TEST_DATABASE_URL`), run, record the result, then DELETE every `*_test.go` before commit. Money and state flows also get SQL invariant checks.
+
+## Git
+1. Branches `main`, `dev`. Feature branch `feature/CM-<n>-<slug>` from `dev`, one ticket per branch (Jira: https://congnguyen29102002-1792466035836.atlassian.net/browse/CM-<n>).
+2. Commit messages in English, start with the Jira key.
+3. Merge to `dev` only after the gate and user approval. `dev` to `main` only on the user's say-so. Never push without "push đi".
 
 ## Per-ticket gate
-1. Read the ticket: Goal, Scope, Acceptance Criteria.
-2. Send the plan and STOP:
-   - Goal and business value (revenue, cost, retention).
-   - BR table: BR-ID | condition | expected result.
-   - Edge cases and failure scenarios (2-3).
-   - Trade-offs: A vs B and why.
-   - Files to create or change.
-   - Verify steps.
-   - Definition of Done.
-3. No file is touched before the user approves the plan.
-4. Code only what the plan says. Anything else is asked first.
-5. Self-review against these rules, then verify.
-6. Report: BR | evidence | result. Unverified items are listed as unverified.
-7. Commit only after approval. Push only on "push đi".
-
-## Every plan must answer
-- Why do we do this? Value for the user, value for the company, backend-as-customer view.
-- Failure thinking: Redis down, stream cut, row inserted then server crashes, DB down, retry/duplicate. State what the user sees and what the data looks like afterwards.
-- Trade-off: at least 2 options, choose one, say why.
-- Scope: complete and correct for the business rule, no extra, no missing.
-- Scale target: 1M users, 10k rps (read + chat). Every error is traceable by `request_id`.
-- Modules have stable boundaries so other teams and partners can use them.
+1. Read the ticket: Goal, Value, Scope, Acceptance Criteria.
+2. Send the plan and STOP: business flow and value (user, company, scale), BR table (BR-ID | condition | result), 2-3 edge cases with failure thinking (Redis/DB down, stream cut, crash after insert, retry/duplicate: what the user sees, what the data looks like), decision table (item | why | trade-off | alternative | source | simpler?), files to create/change/DELETE, verify steps, Definition of Done.
+3. No file is touched before approval. Code only what the plan says; anything else is asked first.
+4. Run skill `chatsmith-review`, agents `code-reviewer` and `qa-verifier`; fix; then gate: `gofmt -l .` empty, `go mod tidy`, `go vet ./...`, `go build ./...`, `go test ./...`, run on localhost and hit the endpoints.
+5. Report: BR | evidence | result; unverified items listed as unverified. Commit only after approval.
 
 ## Definition of Done
-- Every Acceptance Criterion is checked with evidence.
-- Every BR has proof.
-- Build and vet are clean on the user's machine.
-- No claim of "100% correct" without evidence.
+Every Acceptance Criterion and BR has evidence. Build and vet are clean. No claim of "100% correct" without evidence.
