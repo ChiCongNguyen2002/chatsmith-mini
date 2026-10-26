@@ -1,5 +1,21 @@
 package conversation
 
+type Role string
+
+const (
+	RoleUser      Role = "user"
+	RoleAssistant Role = "assistant"
+)
+
+type MessageStatus string
+
+const (
+	StatusStreaming MessageStatus = "streaming"
+	StatusCompleted MessageStatus = "completed"
+	StatusFailed    MessageStatus = "failed"
+	StatusCanceled  MessageStatus = "canceled"
+)
+
 const (
 	MaxTitleRunes       = 200
 	DefaultListLimit    = 20

@@ -40,6 +40,15 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
 .who-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .who input { flex: 1 1 120px; min-width: 0; font: inherit; font-size: 12px; color: var(--fg); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; }
 .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.topbar { padding: 8px 16px; border-bottom: 1px solid var(--border); position: relative; }
+.picker { position: absolute; top: 100%; left: 16px; z-index: 5; width: min(420px, calc(100% - 32px)); background: var(--side); border: 1px solid var(--border); border-radius: 12px; padding: 8px; display: grid; gap: 6px; }
+.tabs { display: flex; gap: 6px; }
+.tab { flex: 1; text-align: center; }
+.tab.on { border-color: var(--accent); background: var(--accent-soft); }
+.opt { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; cursor: pointer; background: none; border: 0; color: var(--fg); font: inherit; text-align: left; }
+.opt:hover { background: var(--surface); }
+.opt:disabled { opacity: .45; cursor: not-allowed; }
+.opt small { color: var(--muted); }
 .banner { background: #3a1d1d; color: #ffd0d0; padding: 8px 16px; font-size: 13px; }
 .view { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 16px; }
 .col { max-width: 760px; margin: 0 auto; display: grid; gap: 16px; }
@@ -52,12 +61,14 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
 .msg.user { justify-self: end; }
 .bubble { padding: 10px 14px; border-radius: 14px; background: var(--surface); overflow-wrap: anywhere; white-space: pre-wrap; }
 .msg.user .bubble { background: var(--accent-soft); }
+.msg.failed .bubble, .msg.canceled .bubble { border: 1px dashed var(--danger); }
+.chip { color: var(--muted); font: 11px/1.4 ui-monospace, Menlo, monospace; }
 .empty { color: var(--muted); }
 .composer { padding: 12px 16px 16px; }
 .composer .box { max-width: 760px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
 .composer input { flex: 1; min-width: 0; background: none; border: 0; color: var(--fg); font: inherit; outline: none; }
 .foot { padding: 6px 16px; border-top: 1px solid var(--border); color: var(--muted); font: 11px/1.4 ui-monospace, Menlo, monospace; }
-.btn:focus-visible, .item:focus-visible, .who input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:focus-visible, .item:focus-visible, .opt:focus-visible, .who input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 720px) {
   .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   .side { max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--border); }
@@ -86,12 +97,17 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
     </div>
   </aside>
   <main class="main">
+    <div class="topbar">
+      <button class="btn small" id="modelBtn" type="button">Model</button>
+      <div class="picker" id="picker" hidden></div>
+    </div>
     <div class="banner" id="banner" hidden></div>
     <div class="view" id="view"></div>
     <div class="composer">
       <div class="box">
-        <input type="text" placeholder="Talk with Chat Smith (gửi tin nhắn sẽ có ở CM-19)" disabled aria-label="Ô nhập tin nhắn, chưa bật">
-        <button class="btn small" type="button" disabled>Send</button>
+        <input type="text" id="input" placeholder="Talk with Chat Smith" maxlength="8000" aria-label="Ô nhập tin nhắn">
+        <button class="btn small" id="send" type="button">Send</button>
+        <button class="btn small" id="stop" type="button" hidden>Stop</button>
       </div>
     </div>
     <div class="foot" id="foot">chưa gọi API nào</div>
@@ -102,8 +118,9 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
   var PAGE = 20;
   var MSG_PAGE = 200;
   var USER_KEY = "chatsmith_user";
+  var MODEL_KEY = "chatsmith_model";
   var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-  var state = { user: loadUser(), items: [], next: null, active: null };
+  var state = { user: loadUser(), items: [], next: null, active: null, catalog: null, model: "", tab: "", busy: false, abort: null };
   var $ = function (id) { return document.getElementById(id); };
 
   function newUUID() {
@@ -194,17 +211,31 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
     box.append(el("p", "", "Welcome"), el("h1", "", "How can I help you today?"));
     view.append(box);
   }
+  function usd(micro) { return "$" + (micro / 1e6).toFixed(micro < 1000 ? 6 : 4); }
+  function chipText(m) {
+    if (m.role !== "assistant" || !m.model) return "";
+    var t = m.model;
+    if (m.status !== "completed") t += " · " + m.status;
+    if (m.cost_micro_usd !== null && m.cost_micro_usd !== undefined) t += " · " + usd(m.cost_micro_usd);
+    if (m.first_token_ms) t += " · TTFT " + m.first_token_ms + " ms";
+    if (m.latency_ms) t += " · " + m.latency_ms + " ms";
+    return t;
+  }
+  function addMessage(col, m) {
+    var row = el("div", "msg " + m.role + (m.status === "failed" ? " failed" : m.status === "canceled" ? " canceled" : ""));
+    var bubble = el("div", "bubble", m.content);
+    var chip = el("div", "chip", chipText(m));
+    row.append(bubble, chip);
+    col.append(row);
+    return { row: row, bubble: bubble, chip: chip };
+  }
   function renderConversation(c, msgs) {
     var view = $("view");
     view.replaceChildren();
     var col = el("div", "col");
     col.append(el("h2", "title", c.title || "Untitled"), el("div", "meta", "Cập nhật " + new Date(c.updated_at).toLocaleString() + " · " + msgs.length + " tin"));
     if (msgs.length === 0) col.append(el("p", "empty", "Cuộc trò chuyện chưa có tin nhắn."));
-    msgs.forEach(function (m) {
-      var row = el("div", "msg " + m.role);
-      row.append(el("div", "bubble", m.content));
-      col.append(row);
-    });
+    msgs.forEach(function (m) { addMessage(col, m); });
     view.append(col);
     view.scrollTop = view.scrollHeight;
   }
@@ -214,6 +245,7 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
     renderList();
   }
   async function openConversation(id, push) {
+    if (state.busy) return;
     var c = await api("GET", "/v1/conversations/" + id);
     if (!c) { closeConversation(); return; }
     var msgs = [];
@@ -226,7 +258,7 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
       after = batch[batch.length - 1].seq;
     }
     state.active = id;
-    if (push) history.pushState({}, "", "/conversation/" + id);
+    if (push) history.pushState({}, "", "/conversation/" + id + location.search);
     renderConversation(c, msgs);
     renderList();
   }
@@ -234,19 +266,159 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
     var m = location.pathname.match(/^\/conversation\/([0-9a-f-]{36})$/);
     if (m) openConversation(m[1], false); else { state.active = null; renderHello(); renderList(); }
   }
+  function modelName(id) {
+    var found = id;
+    if (state.catalog) state.catalog.providers.forEach(function (p) { p.models.forEach(function (m) { if (m.id === id) found = m.name; }); });
+    return found;
+  }
+  function pickModel(id) {
+    state.model = id;
+    try { localStorage.setItem(MODEL_KEY, id); } catch (e) { void e; }
+    var url = new URL(location.href);
+    url.searchParams.set("model", id);
+    history.replaceState({}, "", url);
+    $("modelBtn").textContent = "Model: " + modelName(id) + " ▾";
+    $("picker").hidden = true;
+  }
+  function renderPicker() {
+    var box = $("picker");
+    box.replaceChildren();
+    var tabs = el("div", "tabs");
+    state.catalog.providers.forEach(function (p) {
+      var b = el("button", "btn small tab" + (p.id === state.tab ? " on" : ""), p.name);
+      b.type = "button";
+      b.addEventListener("click", function () { state.tab = p.id; renderPicker(); });
+      tabs.append(b);
+    });
+    box.append(tabs);
+    state.catalog.providers.filter(function (p) { return p.id === state.tab; }).forEach(function (p) {
+      p.models.forEach(function (m) {
+        var b = el("button", "opt");
+        b.type = "button";
+        b.disabled = !m.available;
+        b.append(el("span", "", (m.id === state.model ? "✓ " : "") + m.name + (m.is_new ? " · new" : "")), el("small", "", m.available ? m.description : "Chưa cấu hình API key"));
+        b.addEventListener("click", function () { pickModel(m.id); });
+        box.append(b);
+      });
+    });
+  }
+  async function loadCatalog() {
+    var cat = await api("GET", "/v1/models");
+    if (!cat) return;
+    state.catalog = cat;
+    var wanted = new URL(location.href).searchParams.get("model");
+    try { wanted = wanted || localStorage.getItem(MODEL_KEY); } catch (e) { void e; }
+    var ok = {};
+    cat.providers.forEach(function (p) { p.models.forEach(function (m) { if (m.available) ok[m.id] = p.id; }); });
+    var id = wanted && ok[wanted] ? wanted : cat.default_model;
+    state.tab = ok[id] || cat.providers[0].id;
+    pickModel(id);
+  }
+  function setBusy(on) {
+    state.busy = on;
+    $("send").hidden = on;
+    $("stop").hidden = !on;
+    $("input").disabled = on;
+    if (!on) $("input").focus();
+  }
+  async function readStream(res, handle) {
+    var reader = res.body.getReader();
+    var dec = new TextDecoder();
+    var buf = "";
+    for (;;) {
+      var r = await reader.read();
+      if (r.done) break;
+      buf += dec.decode(r.value, { stream: true });
+      var cut = buf.indexOf("\n\n");
+      while (cut >= 0) {
+        var frame = buf.slice(0, cut);
+        buf = buf.slice(cut + 2);
+        var name = "";
+        var data = "";
+        frame.split("\n").forEach(function (line) {
+          if (line.indexOf("event: ") === 0) name = line.slice(7);
+          else if (line.indexOf("data: ") === 0) data += line.slice(6);
+        });
+        if (name && data) handle(name, JSON.parse(data));
+        cut = buf.indexOf("\n\n");
+      }
+    }
+  }
+  async function send() {
+    var text = $("input").value.trim();
+    if (!text || state.busy || !state.model) return;
+    if (!state.active) {
+      var c = await api("POST", "/v1/conversations", {});
+      if (!c) return;
+      state.active = c.id;
+      history.pushState({}, "", "/conversation/" + c.id + location.search);
+      renderConversation(c, []);
+    }
+    var col = $("view").querySelector(".col");
+    var empty = col.querySelector(".empty");
+    if (empty) empty.remove();
+    $("input").value = "";
+    addMessage(col, { role: "user", content: text, status: "completed" });
+    var ui = addMessage(col, { role: "assistant", content: "", status: "streaming", model: state.model });
+    $("view").scrollTop = $("view").scrollHeight;
+    state.abort = new AbortController();
+    setBusy(true);
+    var started = performance.now();
+    var first = 0;
+    try {
+      var res = await fetch("/v1/conversations/" + state.active + "/messages", {
+        method: "POST",
+        headers: { "X-User-ID": state.user, "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text, model: state.model }),
+        signal: state.abort.signal
+      });
+      var rid = res.headers.get("X-Request-Id") || "";
+      if (!res.ok) {
+        var j = null;
+        try { j = await res.json(); } catch (e) { void e; }
+        showError({ status: res.status, data: j && j.data, rid: rid });
+        ui.row.remove();
+        return;
+      }
+      showError(null);
+      await readStream(res, function (name, d) {
+        if (name === "message.delta") {
+          if (!first) first = Math.round(performance.now() - started);
+          ui.bubble.textContent += d.text;
+          $("view").scrollTop = $("view").scrollHeight;
+        } else if (name === "message.completed") {
+          ui.chip.textContent = d.model + (d.status !== "completed" ? " · " + d.status : "") + " · " + usd(d.cost_micro_usd) + " · TTFT " + d.first_token_ms + " ms · " + d.latency_ms + " ms";
+          if (d.status === "canceled") ui.row.classList.add("canceled");
+        } else if (name === "message.failed") {
+          ui.row.classList.add("failed");
+          ui.chip.textContent = ui.chip.textContent + " " + d.code + " · request_id " + d.request_id;
+        }
+      });
+      $("foot").textContent = "POST messages · TTFT " + first + " ms · tổng " + Math.round(performance.now() - started) + " ms · " + rid;
+    } catch (e) {
+      if (e.name !== "AbortError") showError({ status: 0, data: "mất kết nối khi stream (" + e.name + ")", rid: "" });
+    } finally {
+      state.abort = null;
+      setBusy(false);
+      await loadList(false);
+    }
+  }
   async function boot() {
     $("userId").textContent = state.user;
     state.items = [];
     state.next = null;
+    await loadCatalog();
     await loadList(false);
     routeFromPath();
   }
 
-  $("newChat").addEventListener("click", async function () {
-    var c = await api("POST", "/v1/conversations", {});
-    if (!c) return;
-    state.items.unshift(c);
-    await openConversation(c.id, true);
+  $("newChat").addEventListener("click", function () {
+    if (state.busy) return;
+    history.pushState({}, "", "/" + location.search);
+    state.active = null;
+    renderHello();
+    renderList();
+    $("input").focus();
   });
   $("more").addEventListener("click", function () { loadList(true); });
   $("newUser").addEventListener("click", function () {
@@ -263,6 +435,17 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
     $("pasteUser").value = "";
     history.pushState({}, "", "/");
     boot();
+  });
+  $("modelBtn").addEventListener("click", function () {
+    var box = $("picker");
+    if (!state.catalog) return;
+    if (box.hidden) renderPicker();
+    box.hidden = !box.hidden;
+  });
+  $("send").addEventListener("click", send);
+  $("stop").addEventListener("click", function () { if (state.abort) state.abort.abort(); });
+  $("input").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   });
   window.addEventListener("popstate", routeFromPath);
   boot();
