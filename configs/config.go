@@ -1,35 +1,47 @@
 package configs
 
 import (
-	"errors"
-	"os"
+	"fmt"
+	"time"
 
 	"chatsmith-mini/pkg/failure"
 )
 
+const maxPort = 65535
+
 type Config struct {
-	Port        string
-	DatabaseURL string
-	ScriptsDir  string
+	Server ServerConfig `mapstructure:"SERVER"`
 }
 
-func Load() (*Config, error) {
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		return nil, failure.ErrWithTrace(errors.New("DATABASE_URL is required"))
-	}
-
-	return &Config{
-		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: databaseURL,
-		ScriptsDir:  getEnv("SCRIPTS_DIR", "scripts"),
-	}, nil
+type ServerConfig struct {
+	Port              int           `mapstructure:"PORT"`
+	ReadHeaderTimeout time.Duration `mapstructure:"READ_HEADER_TIMEOUT"`
+	ReadTimeout       time.Duration `mapstructure:"READ_TIMEOUT"`
+	IdleTimeout       time.Duration `mapstructure:"IDLE_TIMEOUT"`
+	MaxHeaderBytes    int           `mapstructure:"MAX_HEADER_BYTES"`
+	ShutdownTimeout   time.Duration `mapstructure:"SHUTDOWN_TIMEOUT"`
 }
 
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+type rule struct {
+	key string
+	ok  bool
+}
+
+func (c *Config) validate() error {
+	s := c.Server
+	rules := []rule{
+		{KeyServerPort, s.Port > 0 && s.Port <= maxPort},
+		{KeyServerReadHeaderTimeout, s.ReadHeaderTimeout > 0},
+		{KeyServerReadTimeout, s.ReadTimeout > 0},
+		{KeyServerIdleTimeout, s.IdleTimeout > 0},
+		{KeyServerMaxHeaderBytes, s.MaxHeaderBytes > 0},
+		{KeyServerShutdownTimeout, s.ShutdownTimeout > 0},
+	}
+	for _, r := range rules {
+		if !r.ok {
+			return failure.ErrWithTrace(fmt.Errorf("%s is invalid", r.key))
+		}
 	}
 
-	return fallback
+	return nil
 }

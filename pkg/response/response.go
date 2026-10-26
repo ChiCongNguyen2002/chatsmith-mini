@@ -3,18 +3,21 @@ package response
 import (
 	"net/http"
 
+	"chatsmith-mini/pkg/failure"
+
 	"github.com/gin-gonic/gin"
 )
 
-type HTTPResponse struct {
+type Body struct {
 	Status int `json:"status"`
 	Data   any `json:"data"`
 }
 
 func Success(ctx *gin.Context, data any) {
-	ctx.JSON(http.StatusOK, HTTPResponse{Status: http.StatusOK, Data: data})
+	ctx.JSON(http.StatusOK, Body{Status: http.StatusOK, Data: data})
 }
 
-func Error(ctx *gin.Context, status int, message string) {
-	ctx.JSON(status, HTTPResponse{Status: status, Data: message})
+func Err(ctx *gin.Context, code failure.Code) {
+	status := code.HTTPStatus()
+	ctx.JSON(status, Body{Status: status, Data: string(code)})
 }
