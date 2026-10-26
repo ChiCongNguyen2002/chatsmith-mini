@@ -9,10 +9,14 @@ import (
 
 type Code string
 
-const CodeInternal Code = "internal_error"
+const (
+	CodeInternal           Code = "internal_error"
+	CodeServiceUnavailable Code = "service_unavailable"
+)
 
 var httpStatusByCode = map[Code]int{
-	CodeInternal: http.StatusInternalServerError,
+	CodeInternal:           http.StatusInternalServerError,
+	CodeServiceUnavailable: http.StatusServiceUnavailable,
 }
 
 func (c Code) HTTPStatus() int {

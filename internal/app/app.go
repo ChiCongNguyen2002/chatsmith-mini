@@ -9,6 +9,7 @@ import (
 	"chatsmith-mini/internal/controller"
 	"chatsmith-mini/internal/router"
 	"chatsmith-mini/internal/server"
+	"chatsmith-mini/pkg/databases"
 	"chatsmith-mini/pkg/logger"
 )
 
@@ -17,7 +18,13 @@ func Run(cfg *configs.Config) error {
 	defer stop()
 
 	log := logger.New()
-	controllers := &controller.Controllers{HealthCheck: controller.NewHealthCheck()}
+
+	db, err := databases.NewPostgres(cfg.Database)
+	if err != nil {
+		return err
+	}
+
+	controllers := &controller.Controllers{HealthCheck: controller.NewHealthCheck(db)}
 	engine := router.New(log, controllers)
 
 	return server.New(cfg.Server, log, engine).Start(ctx)

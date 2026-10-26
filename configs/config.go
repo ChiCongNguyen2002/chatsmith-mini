@@ -10,7 +10,8 @@ import (
 const maxPort = 65535
 
 type Config struct {
-	Server ServerConfig `mapstructure:"SERVER"`
+	Server   ServerConfig   `mapstructure:"SERVER"`
+	Database DatabaseConfig `mapstructure:"DATABASE"`
 }
 
 type ServerConfig struct {
@@ -22,13 +23,19 @@ type ServerConfig struct {
 	ShutdownTimeout   time.Duration `mapstructure:"SHUTDOWN_TIMEOUT"`
 }
 
+type DatabaseConfig struct {
+	URL          string `mapstructure:"URL"`
+	MaxOpenConns int    `mapstructure:"MAX_OPEN_CONNS"`
+	MaxIdleConns int    `mapstructure:"MAX_IDLE_CONNS"`
+}
+
 type rule struct {
 	key string
 	ok  bool
 }
 
 func (c *Config) validate() error {
-	s := c.Server
+	s, d := c.Server, c.Database
 	rules := []rule{
 		{KeyServerPort, s.Port > 0 && s.Port <= maxPort},
 		{KeyServerReadHeaderTimeout, s.ReadHeaderTimeout > 0},
@@ -36,6 +43,9 @@ func (c *Config) validate() error {
 		{KeyServerIdleTimeout, s.IdleTimeout > 0},
 		{KeyServerMaxHeaderBytes, s.MaxHeaderBytes > 0},
 		{KeyServerShutdownTimeout, s.ShutdownTimeout > 0},
+		{KeyDatabaseURL, d.URL != ""},
+		{KeyDatabaseMaxOpenConns, d.MaxOpenConns > 0},
+		{KeyDatabaseMaxIdleConns, d.MaxIdleConns > 0 && d.MaxIdleConns <= d.MaxOpenConns},
 	}
 	for _, r := range rules {
 		if !r.ok {
