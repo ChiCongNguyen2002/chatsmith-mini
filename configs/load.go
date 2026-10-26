@@ -13,10 +13,14 @@ import (
 
 const (
 	envConfigFile = "CONFIG_FILE"
-	envPort       = "PORT"
 	keyDelimiter  = "."
 	envDelimiter  = "_"
 )
+
+var legacyEnv = map[string]string{
+	KeyServerPort:  "PORT",
+	KeyDatabaseURL: "DATABASE_URL",
+}
 
 func Load() (*Config, error) {
 	v := viper.New()
@@ -30,8 +34,10 @@ func Load() (*Config, error) {
 
 	v.SetEnvKeyReplacer(strings.NewReplacer(keyDelimiter, envDelimiter))
 	v.AutomaticEnv()
-	if err := v.BindEnv(KeyServerPort, envPort); err != nil {
-		return nil, failure.ErrWithTrace(err)
+	for key, name := range legacyEnv {
+		if err := v.BindEnv(key, name); err != nil {
+			return nil, failure.ErrWithTrace(err)
+		}
 	}
 
 	var cfg Config

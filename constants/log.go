@@ -9,4 +9,5 @@ const (
 	LogKeyPanic     = "panic"
 	LogKeyStack     = "stack"
 	LogKeyPort      = "port"
+	LogKeyError     = "error"
 )
