@@ -18,8 +18,10 @@ const (
 )
 
 var legacyEnv = map[string]string{
-	KeyServerPort:  "PORT",
-	KeyDatabaseURL: "DATABASE_URL",
+	KeyServerPort:           "PORT",
+	KeyDatabaseURL:          "DATABASE_URL",
+	KeyProviderOpenAIKey:    "OPENAI_API_KEY",
+	KeyProviderAnthropicKey: "ANTHROPIC_API_KEY",
 }
 
 func Load() (*Config, error) {
