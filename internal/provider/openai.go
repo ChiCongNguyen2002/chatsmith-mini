@@ -21,6 +21,7 @@ const (
 	openAIResponseIncomplete = "response.incomplete"
 	openAIResponseFailed     = "response.failed"
 	openAIErrorEvent         = "error"
+	openAIMaxOutputReason    = "max_output_tokens"
 )
 
 type OpenAI struct {
@@ -63,6 +64,9 @@ type openAIEvent struct {
 			InputTokens  int64 `json:"input_tokens"`
 			OutputTokens int64 `json:"output_tokens"`
 		} `json:"usage"`
+		IncompleteDetails struct {
+			Reason string `json:"reason"`
+		} `json:"incomplete_details"`
 		Error openAIError `json:"error"`
 	} `json:"response"`
 }
@@ -100,6 +104,7 @@ func (o *OpenAI) Stream(ctx context.Context, req Request, onDelta func(string) e
 		case openAIResponseCompleted, openAIResponseIncomplete:
 			result.InputTokens = event.Response.Usage.InputTokens
 			result.OutputTokens = event.Response.Usage.OutputTokens
+			result.Truncated = event.Response.IncompleteDetails.Reason == openAIMaxOutputReason
 			completed = true
 		case openAIResponseFailed:
 			return &APIError{Provider: constants.ProviderOpenAI, Type: event.Response.Error.Type, Message: event.Response.Error.Message}

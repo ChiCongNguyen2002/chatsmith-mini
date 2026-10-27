@@ -16,7 +16,7 @@ PROVIDER:
   OPENAI_BASE_URL: https://api.openai.com
   OPENAI_REASONING_EFFORT: low
   ANTHROPIC_BASE_URL: https://api.anthropic.com
-  ANTHROPIC_EFFORT: low
+  ANTHROPIC_EFFORT: medium
 
 CHAT:
   DEFAULT_MODEL: claude-haiku-5-5
