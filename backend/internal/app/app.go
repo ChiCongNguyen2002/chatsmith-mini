@@ -7,13 +7,16 @@ import (
 
 	"chatsmith-mini/configs"
 	"chatsmith-mini/constants"
+	"chatsmith-mini/internal/auth"
 	"chatsmith-mini/internal/catalog"
 	"chatsmith-mini/internal/chat"
 	"chatsmith-mini/internal/controller"
 	"chatsmith-mini/internal/conversation"
+	"chatsmith-mini/internal/middleware"
 	"chatsmith-mini/internal/provider"
 	"chatsmith-mini/internal/router"
 	"chatsmith-mini/internal/server"
+	"chatsmith-mini/internal/user"
 	"chatsmith-mini/pkg/databases"
 	"chatsmith-mini/pkg/logger"
 )
@@ -32,6 +35,8 @@ func Run(cfg *configs.Config) error {
 	streamers := newStreamers(cfg.Provider)
 	available := func(p constants.Provider) bool { _, ok := streamers[p]; return ok }
 
+	users := user.NewModule(&user.CreateModuleDTO{DB: db})
+	authModule := auth.NewModule(&auth.CreateModuleDTO{Config: cfg.Auth, Users: users.Service})
 	conversations := conversation.NewModule(&conversation.CreateModuleDTO{DB: db})
 	catalogs := catalog.NewModule(&catalog.CreateModuleDTO{DB: db, Available: available, DefaultModel: cfg.Chat.DefaultModel})
 	if err := catalogs.Service.CheckDefault(ctx); err != nil {
@@ -51,8 +56,9 @@ func Run(cfg *configs.Config) error {
 		Conversation: controller.NewConversation(conversations.Service),
 		Catalog:      controller.NewCatalog(catalogs.Service),
 		Chat:         controller.NewChat(chats.Service, cfg.Chat.MaxBodyBytes),
+		Auth:         controller.NewAuth(authModule.Service, cfg.Auth),
 	}
-	engine := router.New(log, controllers, cfg.Server.RequestTimeout, cfg.Server.FrontendDir)
+	engine := router.New(log, controllers, cfg.Server.RequestTimeout, cfg.Server.FrontendDir, middleware.Session(authModule.Service))
 
 	return server.New(cfg.Server, log, engine).Start(ctx)
 }

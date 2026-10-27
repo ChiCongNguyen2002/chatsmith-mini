@@ -17,6 +17,7 @@ type Controllers struct {
 	Conversation *Conversation
 	Catalog      *Catalog
 	Chat         *Chat
+	Auth         *Auth
 }
 
 func respondError(ctx *gin.Context, err error) {

@@ -30,8 +30,6 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
 .more { margin: 8px; }
 .who { padding: 10px 12px; border-top: 1px solid var(--border); display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
 .who code { color: var(--fg); word-break: break-all; }
-.who-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.who input { flex: 1 1 120px; min-width: 0; font: inherit; font-size: 12px; color: var(--fg); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; }
 .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .topbar { padding: 8px 16px; border-bottom: 1px solid var(--border); position: relative; }
 .picker { position: absolute; top: 100%; left: 16px; z-index: 5; width: min(420px, calc(100% - 32px)); background: var(--side); border: 1px solid var(--border); border-radius: 12px; padding: 8px; display: grid; gap: 6px; }
@@ -62,7 +60,7 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
 .composer .box { max-width: 760px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
 .composer input { flex: 1; min-width: 0; background: none; border: 0; color: var(--fg); font: inherit; outline: none; }
 .foot { padding: 6px 16px; border-top: 1px solid var(--border); color: var(--muted); font: 11px/1.4 ui-monospace, Menlo, monospace; }
-.btn:focus-visible, .item:focus-visible, .opt:focus-visible, .who input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:focus-visible, .item:focus-visible, .opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 720px) {
   .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   .side { max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--border); }

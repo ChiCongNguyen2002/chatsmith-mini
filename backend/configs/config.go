@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	maxPort     = 65535
-	microPerUSD = 1_000_000
+	maxPort        = 65535
+	microPerUSD    = 1_000_000
+	minSecretBytes = 32
 )
 
 type Config struct {
@@ -18,6 +19,17 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"DATABASE"`
 	Provider ProviderConfig `mapstructure:"PROVIDER"`
 	Chat     ChatConfig     `mapstructure:"CHAT"`
+	Auth     AuthConfig     `mapstructure:"AUTH"`
+}
+
+type AuthConfig struct {
+	GoogleClientID     string        `mapstructure:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string        `mapstructure:"GOOGLE_CLIENT_SECRET"`
+	PublicBaseURL      string        `mapstructure:"PUBLIC_BASE_URL"`
+	SessionSecret      string        `mapstructure:"SESSION_SECRET"`
+	SessionTTL         time.Duration `mapstructure:"SESSION_TTL"`
+	StateTTL           time.Duration `mapstructure:"STATE_TTL"`
+	CookieSecure       bool          `mapstructure:"COOKIE_SECURE"`
 }
 
 type ServerConfig struct {
@@ -89,6 +101,12 @@ func (c *Config) validate() error {
 		{KeyChatContextTokens, h.ContextTokens > 0},
 		{KeyChatTimeout, h.Timeout > 0},
 		{KeyChatDailyBudgetUSD, h.DailyBudgetUSD >= 0},
+		{KeyAuthGoogleClientID, c.Auth.GoogleClientID != ""},
+		{KeyAuthGoogleClientSecret, c.Auth.GoogleClientSecret != ""},
+		{KeyAuthPublicBaseURL, c.Auth.PublicBaseURL != ""},
+		{KeyAuthSessionSecret, len(c.Auth.SessionSecret) >= minSecretBytes},
+		{KeyAuthSessionTTL, c.Auth.SessionTTL > 0},
+		{KeyAuthStateTTL, c.Auth.StateTTL > 0},
 	}
 	for _, r := range rules {
 		if !r.ok {

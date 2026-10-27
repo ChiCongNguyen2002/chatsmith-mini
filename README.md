@@ -26,7 +26,8 @@ make up                # cần file .env, xem docs/quickstart.md; mở http://12
 - [Cấu hình](docs/configuration.md)
 - [Kiến trúc](docs/architecture.md)
 - [Kiểm thử](docs/testing.md)
+- [Deploy lên GCP](docs/deployment.md)
 
 ## Trạng thái
 
-Chat với Claude, lưu lịch sử, tính chi phí và trần chi tiêu mỗi ngày đã chạy. Chưa có: đăng nhập Google, gói Free/Pro, giới hạn lượt dùng, nhiều nhà cung cấp, deploy lên GCP. Chi tiết trong [docs/architecture.md](docs/architecture.md#chưa-có).
+Chat với Claude, lưu lịch sử theo tài khoản Google, tính chi phí và trần chi tiêu mỗi ngày đã chạy trên máy dev. Đăng nhập Google đã có trong code, chưa deploy lên GCP. Chưa có: gói Free/Pro, giới hạn lượt dùng, nhiều nhà cung cấp. Chi tiết trong [docs/architecture.md](docs/architecture.md#chưa-có).

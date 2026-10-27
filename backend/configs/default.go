@@ -28,6 +28,13 @@ const (
 	KeyChatContextTokens        = "CHAT.CONTEXT_TOKENS"
 	KeyChatTimeout              = "CHAT.TIMEOUT"
 	KeyChatDailyBudgetUSD       = "CHAT.DAILY_BUDGET_USD"
+	KeyAuthGoogleClientID       = "AUTH.GOOGLE_CLIENT_ID"
+	KeyAuthGoogleClientSecret   = "AUTH.GOOGLE_CLIENT_SECRET"
+	KeyAuthPublicBaseURL        = "AUTH.PUBLIC_BASE_URL"
+	KeyAuthSessionSecret        = "AUTH.SESSION_SECRET"
+	KeyAuthSessionTTL           = "AUTH.SESSION_TTL"
+	KeyAuthStateTTL             = "AUTH.STATE_TTL"
+	KeyAuthCookieSecure         = "AUTH.COOKIE_SECURE"
 )
 
 const (
@@ -53,6 +60,9 @@ const (
 	DefaultContextTokens     = 24000
 	DefaultChatTimeout       = 120 * time.Second
 	DefaultDailyBudgetUSD    = 2.0
+	DefaultSessionTTL        = 168 * time.Hour
+	DefaultStateTTL          = 5 * time.Minute
+	DefaultCookieSecure      = true
 )
 
 var defaults = map[string]any{
@@ -78,4 +88,7 @@ var defaults = map[string]any{
 	KeyChatContextTokens:        DefaultContextTokens,
 	KeyChatTimeout:              DefaultChatTimeout,
 	KeyChatDailyBudgetUSD:       DefaultDailyBudgetUSD,
+	KeyAuthSessionTTL:           DefaultSessionTTL,
+	KeyAuthStateTTL:             DefaultStateTTL,
+	KeyAuthCookieSecure:         DefaultCookieSecure,
 }

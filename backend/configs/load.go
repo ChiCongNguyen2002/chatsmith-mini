@@ -17,11 +17,15 @@ const (
 	envDelimiter  = "_"
 )
 
-var legacyEnv = map[string]string{
-	KeyServerPort:           "PORT",
-	KeyDatabaseURL:          "DATABASE_URL",
-	KeyProviderOpenAIKey:    "OPENAI_API_KEY",
-	KeyProviderAnthropicKey: "ANTHROPIC_API_KEY",
+var explicitEnv = map[string]string{
+	KeyServerPort:             "PORT",
+	KeyDatabaseURL:            "DATABASE_URL",
+	KeyProviderOpenAIKey:      "OPENAI_API_KEY",
+	KeyProviderAnthropicKey:   "ANTHROPIC_API_KEY",
+	KeyAuthGoogleClientID:     "AUTH_GOOGLE_CLIENT_ID",
+	KeyAuthGoogleClientSecret: "AUTH_GOOGLE_CLIENT_SECRET",
+	KeyAuthPublicBaseURL:      "AUTH_PUBLIC_BASE_URL",
+	KeyAuthSessionSecret:      "AUTH_SESSION_SECRET",
 }
 
 func Load() (*Config, error) {
@@ -36,7 +40,7 @@ func Load() (*Config, error) {
 
 	v.SetEnvKeyReplacer(strings.NewReplacer(keyDelimiter, envDelimiter))
 	v.AutomaticEnv()
-	for key, name := range legacyEnv {
+	for key, name := range explicitEnv {
 		if err := v.BindEnv(key, name); err != nil {
 			return nil, failure.ErrWithTrace(err)
 		}

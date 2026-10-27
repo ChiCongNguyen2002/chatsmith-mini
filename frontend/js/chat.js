@@ -70,7 +70,7 @@
     var first = 0;
     var res = await fetch("/v1/conversations/" + convId + "/messages", {
       method: "POST",
-      headers: { "X-User-ID": state.user, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: text, model: state.model }),
       signal: state.abort.signal
     });

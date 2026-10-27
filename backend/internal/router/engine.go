@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"chatsmith-mini/internal/auth"
 	"chatsmith-mini/internal/controller"
 	"chatsmith-mini/internal/middleware"
 
@@ -18,7 +19,7 @@ const (
 	routeStatic           = "/static"
 )
 
-func New(log *slog.Logger, controllers *controller.Controllers, requestTimeout time.Duration, frontendDir string) *gin.Engine {
+func New(log *slog.Logger, controllers *controller.Controllers, requestTimeout time.Duration, frontendDir string, session gin.HandlerFunc) *gin.Engine {
 	engine := gin.New()
 	engine.Use(middleware.RequestID(log), middleware.AccessLog(), middleware.Recovery())
 
@@ -26,8 +27,12 @@ func New(log *slog.Logger, controllers *controller.Controllers, requestTimeout t
 	engine.GET(routeConversationPage, controllers.Web.Index)
 	engine.Static(routeStatic, frontendDir)
 	engine.GET(routeHealthz, controllers.HealthCheck.Check)
+	engine.GET(auth.PathGoogleLogin, controllers.Auth.Login)
+	engine.GET(auth.PathGoogleCallback, controllers.Auth.Callback)
+	engine.POST(auth.PathLogout, controllers.Auth.Logout)
 
-	v1 := engine.Group(routeV1, middleware.UserID())
+	v1 := engine.Group(routeV1, session)
+	registerAuth(v1, controllers.Auth)
 	registerChat(v1, controllers.Chat)
 
 	timed := v1.Group("", middleware.Timeout(requestTimeout))

@@ -3,25 +3,9 @@ var App = (window.App = {});
 (function (App) {
   var PAGE = 20;
   var MSG_PAGE = 200;
-  var USER_KEY = "chatsmith_user";
   var TRUNCATED_NOTICE = "Câu trả lời bị cắt vì giới hạn độ dài";
-  var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   var $ = function (id) { return document.getElementById(id); };
 
-  function newUUID() {
-    var b = crypto.getRandomValues(new Uint8Array(16));
-    b[6] = (b[6] & 0x0f) | 0x40;
-    b[8] = (b[8] & 0x3f) | 0x80;
-    var h = Array.prototype.map.call(b, function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
-    return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
-  }
-  function saveUser(id) { try { localStorage.setItem(USER_KEY, id); } catch (e) { return; } }
-  function loadUser() {
-    var id = "";
-    try { id = localStorage.getItem(USER_KEY) || ""; } catch (e) { id = ""; }
-    if (!UUID.test(id)) { id = newUUID(); saveUser(id); }
-    return id;
-  }
   function el(tag, cls, text) {
     var node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -38,7 +22,7 @@ var App = (window.App = {});
     var started = performance.now();
     var res;
     try {
-      res = await fetch(path, { method: method, headers: { "X-User-ID": App.state.user, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+      res = await fetch(path, { method: method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
     } catch (e) {
       showError({ status: 0, data: "không kết nối được máy chủ (" + e.name + ")", rid: "" });
       return null;
@@ -48,12 +32,25 @@ var App = (window.App = {});
     var json = null;
     try { json = await res.json(); } catch (e) { json = null; }
     $("foot").textContent = method + " " + path.split("?")[0] + " · " + ms + " ms · " + res.status + (rid ? " · " + rid : "");
+    if (res.status === 401) {
+      showLogin();
+      return null;
+    }
     if (!res.ok) {
       showError({ status: res.status, data: json && json.data, rid: rid });
       return null;
     }
     showError(null);
     return json.data;
+  }
+  function showLogin() {
+    var view = $("view");
+    view.replaceChildren();
+    var box = el("div", "hello");
+    var link = el("a", "btn", "Đăng nhập bằng Google");
+    link.href = "/auth/google/login";
+    box.append(el("h1", "", "Chat Smith Mini"), el("p", "", "Đăng nhập để xem và tiếp tục các cuộc chat của bạn."), link);
+    view.append(box);
   }
   function groupOf(iso) {
     var d = new Date(iso);
@@ -165,12 +162,10 @@ var App = (window.App = {});
     if (m) openConversation(m[1], false); else { App.state.active = null; renderHello(); renderList(); }
   }
 
-  App.state = { user: loadUser(), items: [], next: null, active: null, catalog: null, model: "", tab: "", busy: false, abort: null };
+  App.state = { items: [], next: null, active: null, catalog: null, model: "", tab: "", busy: false, abort: null };
   App.$ = $;
   App.el = el;
-  App.newUUID = newUUID;
-  App.saveUser = saveUser;
-  App.UUID = UUID;
+  App.showLogin = showLogin;
   App.showError = showError;
   App.api = api;
   App.usd = usd;
