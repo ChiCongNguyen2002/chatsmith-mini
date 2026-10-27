@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat Smith Mini</title>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="side-top">
+      <button class="btn" id="newChat" type="button">+ New Chat</button>
+    </div>
+    <div class="recents">Recents</div>
+    <div class="list" id="list"></div>
+    <button class="btn more" id="more" type="button" hidden>Load more</button>
+    <div class="who">
+      <div>User ID (X-User-ID tạm, chưa phải đăng nhập)</div>
+      <code id="userId"></code>
+      <div class="who-row">
+        <button class="btn small" id="newUser" type="button">New user</button>
+        <input id="pasteUser" type="text" placeholder="Dán user id" aria-label="Dán user id">
+        <button class="btn small" id="useUser" type="button">Dùng</button>
+      </div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <button class="btn small" id="modelBtn" type="button">Model</button>
+      <div class="picker" id="picker" hidden></div>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+    <div class="view" id="view"></div>
+    <div class="composer">
+      <div class="box">
+        <input type="text" id="input" placeholder="Talk with Chat Smith" maxlength="8000" aria-label="Ô nhập tin nhắn">
+        <button class="btn small" id="send" type="button">Send</button>
+        <button class="btn small" id="stop" type="button" hidden>Stop</button>
+      </div>
+    </div>
+    <div class="foot" id="foot">chưa gọi API nào</div>
+  </main>
+</div>
+<script src="/static/js/core.js"></script>
+<script src="/static/js/models.js"></script>
+<script src="/static/js/chat.js"></script>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

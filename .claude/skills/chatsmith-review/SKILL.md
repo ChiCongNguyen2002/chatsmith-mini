@@ -9,8 +9,13 @@ Orchestrated by the main session (sub-agents cannot call sub-agents).
 
 ## When
 1. Before the plan: call `pm-analyst` with the ticket key.
-2. After coding: call `code-reviewer` and `qa-verifier` in parallel on the changed files and every old file touched. Fix, run again until both report no blocker.
-3. Then send the report to the user. Unclear points are asked, not guessed.
+2. After coding, run in this order. Each step must pass before the next one starts:
+   a. Gate and logic: `qa-verifier` (happy, bad and edge case for every BR).
+   b. UI: `ui-tester` if the change touches `web/`. Compare with the approved baseline.
+   c. PM: `pm-analyst` checks each Acceptance Criterion in the Jira ticket against the evidence from a and b.
+   d. Review: `code-reviewer` on the changed files and every old file touched. Fix, run again until no blocker.
+   Steps a and d can run in parallel. Steps b and c wait for a.
+3. Then send the report to the user. Unclear points are asked, not guessed. Do not report done if step a or b is unverified.
 
 ## 6 steps, each a checkable question
 1. Business: can you state who uses it, the flow, 3 edge cases, where the money goes?

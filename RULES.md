@@ -1,7 +1,7 @@
 # Working Rules
 
 ## Structure (Anfin)
-`cmd/app/main.go` (func body <=15 lines) | `configs/{config,default,load}.go` + yaml | `constants/` | `internal/app/{app,infra,module}.go` (manual DI) | `internal/<domain>/{module,repo,service,model,dto,constants}.go` | `internal/controller/<domain>.go` | `internal/router/<domain>.go` | `internal/middleware` | `internal/server` | `pkg/{failure,response,logger,databases,uid}`
+Layout: `backend/` (Go), `frontend/` (static HTML, CSS, JS served at `/`), `deploy/` (compose), `docs/`, `tests/`. Inside `backend/`: `cmd/app/main.go` (func body <=15 lines) | `configs/{config,default,load}.go` + yaml | `constants/` | `internal/app/{app,infra,module}.go` (manual DI) | `internal/<domain>/{module,repo,service,model,dto,constants}.go` | `internal/controller/<domain>.go` | `internal/router/<domain>.go` | `internal/middleware` | `internal/server` | `pkg/{failure,response,logger,databases,uid}`
 
 ## Domain
 1. `NewModule(dto *CreateModuleDTO) *Module`; `newRepo`/`newService` unexported; return structs.

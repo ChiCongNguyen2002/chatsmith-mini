@@ -1,10 +1,15 @@
-.PHONY: run up down
+.PHONY: run up down test
+
+COMPOSE := docker compose --env-file .env -f deploy/docker-compose.yml
 
 run:
-	go run ./cmd/app
+	cd backend && go run ./cmd/app
 
 up:
-	docker compose up --build -d
+	$(COMPOSE) up --build -d
 
 down:
-	docker compose down
+	$(COMPOSE) down
+
+test:
+	cd backend && go vet ./... && go build ./...
