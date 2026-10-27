@@ -21,6 +21,7 @@ type Result struct {
 	InputTokens       int64
 	OutputTokens      int64
 	ProviderRequestID string
+	Truncated         bool
 }
 
 type APIError struct {

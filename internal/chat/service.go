@@ -123,6 +123,9 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 	}
 
 	status, code := classify(ctx, genCtx, streamErr, emitErr)
+	if status == conversation.StatusCompleted && result.Truncated {
+		status = conversation.StatusTruncated
+	}
 	usage := usageFor(result, status, content.String(), turn.Prompt)
 	costMicro := cost(usage, turn.Model.InputMicro, turn.Model.OutputMicro)
 	latencyMS := int(time.Since(started).Milliseconds())
@@ -158,7 +161,7 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 	s.logFinished(log, turn, status, usage, costMicro, firstTokenMS, latencyMS)
 
 	switch status {
-	case conversation.StatusCompleted:
+	case conversation.StatusCompleted, conversation.StatusTruncated:
 		_ = emit(Event{Name: EventCompleted, Data: completedData{
 			MessageID:    turn.Assistant.ID,
 			Status:       status,

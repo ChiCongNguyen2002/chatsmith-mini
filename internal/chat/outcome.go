@@ -25,7 +25,8 @@ func classify(ctx, genCtx context.Context, streamErr, emitErr error) (conversati
 
 func usageFor(result provider.Result, status conversation.MessageStatus, content string, prompt []provider.Message) usageData {
 	usage := usageData{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens}
-	if status == conversation.StatusCompleted || content == "" {
+	delivered := status == conversation.StatusCompleted || status == conversation.StatusTruncated
+	if delivered || content == "" {
 		return usage
 	}
 

@@ -14,6 +14,7 @@ const (
 	StatusCompleted MessageStatus = "completed"
 	StatusFailed    MessageStatus = "failed"
 	StatusCanceled  MessageStatus = "canceled"
+	StatusTruncated MessageStatus = "truncated"
 )
 
 const (

@@ -22,6 +22,7 @@ const (
 	anthropicMessageStop  = "message_stop"
 	anthropicError        = "error"
 	anthropicTextDelta    = "text_delta"
+	anthropicStopMaxToken = "max_tokens"
 )
 
 type Anthropic struct {
@@ -59,8 +60,9 @@ type anthropicEvent struct {
 		Usage anthropicUsage `json:"usage"`
 	} `json:"message"`
 	Delta struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
+		Type       string `json:"type"`
+		Text       string `json:"text"`
+		StopReason string `json:"stop_reason"`
 	} `json:"delta"`
 	Usage anthropicUsage `json:"usage"`
 	Error struct {
@@ -101,6 +103,7 @@ func (a *Anthropic) Stream(ctx context.Context, req Request, onDelta func(string
 				return onDelta(event.Delta.Text)
 			}
 		case anthropicMessageDelta:
+			result.Truncated = event.Delta.StopReason == anthropicStopMaxToken
 			result.OutputTokens = event.Usage.OutputTokens
 			if event.Usage.InputTokens > 0 {
 				result.InputTokens = event.Usage.InputTokens

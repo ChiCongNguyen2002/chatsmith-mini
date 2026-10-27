@@ -61,7 +61,8 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
 .msg.user { justify-self: end; }
 .bubble { padding: 10px 14px; border-radius: 14px; background: var(--surface); overflow-wrap: anywhere; white-space: pre-wrap; }
 .msg.user .bubble { background: var(--accent-soft); }
-.msg.failed .bubble, .msg.canceled .bubble { border: 1px dashed var(--danger); }
+.msg.failed .bubble, .msg.canceled .bubble, .msg.truncated .bubble { border: 1px dashed var(--danger); }
+.notice { color: var(--danger); font-size: 12px; }
 .chip { color: var(--muted); font: 11px/1.4 ui-monospace, Menlo, monospace; }
 .empty { color: var(--muted); }
 .composer { padding: 12px 16px 16px; }
@@ -221,13 +222,24 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
     if (m.latency_ms) t += " · " + m.latency_ms + " ms";
     return t;
   }
+  var TRUNCATED_NOTICE = "Câu trả lời bị cắt vì giới hạn độ dài";
+  function markStatus(ui, status) {
+    ui.row.classList.remove("failed", "canceled", "truncated");
+    if (status === "failed" || status === "canceled" || status === "truncated") ui.row.classList.add(status);
+    if (status === "truncated" && !ui.notice) {
+      ui.notice = el("div", "notice", TRUNCATED_NOTICE);
+      ui.row.insertBefore(ui.notice, ui.chip);
+    }
+  }
   function addMessage(col, m) {
-    var row = el("div", "msg " + m.role + (m.status === "failed" ? " failed" : m.status === "canceled" ? " canceled" : ""));
+    var row = el("div", "msg " + m.role);
     var bubble = el("div", "bubble", m.content);
     var chip = el("div", "chip", chipText(m));
+    var ui = { row: row, bubble: bubble, chip: chip, notice: null };
     row.append(bubble, chip);
     col.append(row);
-    return { row: row, bubble: bubble, chip: chip };
+    markStatus(ui, m.status);
+    return ui;
   }
   function renderConversation(c, msgs) {
     var view = $("view");
@@ -344,6 +356,15 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
       }
     }
   }
+  async function refreshHeader(id) {
+    var c = await api("GET", "/v1/conversations/" + id);
+    var view = $("view");
+    var title = view.querySelector(".title");
+    var meta = view.querySelector(".meta");
+    if (!c || state.active !== id || !title || !meta) return;
+    title.textContent = c.title || "Untitled";
+    meta.textContent = "Cập nhật " + new Date(c.updated_at).toLocaleString() + " · " + view.querySelectorAll(".msg").length + " tin";
+  }
   async function send() {
     var text = $("input").value.trim();
     if (!text || state.busy || !state.model) return;
@@ -354,6 +375,7 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
       history.pushState({}, "", "/conversation/" + c.id + location.search);
       renderConversation(c, []);
     }
+    var convId = state.active;
     var col = $("view").querySelector(".col");
     var empty = col.querySelector(".empty");
     if (empty) empty.remove();
@@ -388,9 +410,9 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
           $("view").scrollTop = $("view").scrollHeight;
         } else if (name === "message.completed") {
           ui.chip.textContent = d.model + (d.status !== "completed" ? " · " + d.status : "") + " · " + usd(d.cost_micro_usd) + " · TTFT " + d.first_token_ms + " ms · " + d.latency_ms + " ms";
-          if (d.status === "canceled") ui.row.classList.add("canceled");
+          markStatus(ui, d.status);
         } else if (name === "message.failed") {
-          ui.row.classList.add("failed");
+          markStatus(ui, "failed");
           ui.chip.textContent = ui.chip.textContent + " " + d.code + " · request_id " + d.request_id;
         }
       });
@@ -401,6 +423,7 @@ body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple
       state.abort = null;
       setBusy(false);
       await loadList(false);
+      await refreshHeader(convId);
     }
   }
   async function boot() {
