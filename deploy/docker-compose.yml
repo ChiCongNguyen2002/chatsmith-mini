@@ -7,7 +7,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-chatsmith}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d:ro
+      - ../backend/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 3s
@@ -15,7 +15,9 @@ services:
       retries: 10
 
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
     environment:
       PORT: "8080"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

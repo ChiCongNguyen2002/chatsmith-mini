@@ -11,6 +11,7 @@ const (
 	KeyServerShutdownTimeout    = "SERVER.SHUTDOWN_TIMEOUT"
 	KeyServerRequestTimeout     = "SERVER.REQUEST_TIMEOUT"
 	KeyServerStreamGrace        = "SERVER.STREAM_GRACE"
+	KeyServerFrontendDir        = "SERVER.FRONTEND_DIR"
 	KeyDatabaseURL              = "DATABASE.URL"
 	KeyDatabaseMaxOpenConns     = "DATABASE.MAX_OPEN_CONNS"
 	KeyDatabaseMaxIdleConns     = "DATABASE.MAX_IDLE_CONNS"
@@ -39,6 +40,7 @@ const (
 	DefaultShutdownTimeout   = 8 * time.Second
 	DefaultRequestTimeout    = 10 * time.Second
 	DefaultStreamGrace       = 2 * time.Second
+	DefaultFrontendDir       = "../frontend"
 	DefaultMaxOpenConns      = 25
 	DefaultMaxIdleConns      = 5
 	DefaultOpenAIBaseURL     = "https://api.openai.com"
@@ -62,6 +64,7 @@ var defaults = map[string]any{
 	KeyServerShutdownTimeout:    DefaultShutdownTimeout,
 	KeyServerRequestTimeout:     DefaultRequestTimeout,
 	KeyServerStreamGrace:        DefaultStreamGrace,
+	KeyServerFrontendDir:        DefaultFrontendDir,
 	KeyDatabaseMaxOpenConns:     DefaultMaxOpenConns,
 	KeyDatabaseMaxIdleConns:     DefaultMaxIdleConns,
 	KeyProviderOpenAIBaseURL:    DefaultOpenAIBaseURL,

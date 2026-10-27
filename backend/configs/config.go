@@ -29,6 +29,7 @@ type ServerConfig struct {
 	ShutdownTimeout   time.Duration `mapstructure:"SHUTDOWN_TIMEOUT"`
 	RequestTimeout    time.Duration `mapstructure:"REQUEST_TIMEOUT"`
 	StreamGrace       time.Duration `mapstructure:"STREAM_GRACE"`
+	FrontendDir       string        `mapstructure:"FRONTEND_DIR"`
 }
 
 type DatabaseConfig struct {

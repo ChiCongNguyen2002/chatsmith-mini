@@ -46,13 +46,13 @@ func Run(cfg *configs.Config) error {
 	})
 
 	controllers := &controller.Controllers{
-		Web:          controller.NewWeb(),
+		Web:          controller.NewWeb(cfg.Server.FrontendDir),
 		HealthCheck:  controller.NewHealthCheck(db),
 		Conversation: controller.NewConversation(conversations.Service),
 		Catalog:      controller.NewCatalog(catalogs.Service),
 		Chat:         controller.NewChat(chats.Service, cfg.Chat.MaxBodyBytes),
 	}
-	engine := router.New(log, controllers, cfg.Server.RequestTimeout)
+	engine := router.New(log, controllers, cfg.Server.RequestTimeout, cfg.Server.FrontendDir)
 
 	return server.New(cfg.Server, log, engine).Start(ctx)
 }

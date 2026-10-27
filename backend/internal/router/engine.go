@@ -15,14 +15,16 @@ const (
 	routeConversationPage = "/conversation/:" + controller.ParamConversationID
 	routeHealthz          = "/healthz"
 	routeV1               = "/v1"
+	routeStatic           = "/static"
 )
 
-func New(log *slog.Logger, controllers *controller.Controllers, requestTimeout time.Duration) *gin.Engine {
+func New(log *slog.Logger, controllers *controller.Controllers, requestTimeout time.Duration, frontendDir string) *gin.Engine {
 	engine := gin.New()
 	engine.Use(middleware.RequestID(log), middleware.AccessLog(), middleware.Recovery())
 
 	engine.GET(routeRoot, controllers.Web.Index)
 	engine.GET(routeConversationPage, controllers.Web.Index)
+	engine.Static(routeStatic, frontendDir)
 	engine.GET(routeHealthz, controllers.HealthCheck.Check)
 
 	v1 := engine.Group(routeV1, middleware.UserID())
