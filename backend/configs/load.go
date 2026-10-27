@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
@@ -28,7 +29,7 @@ var explicitEnv = map[string]string{
 	KeyAuthSessionSecret:      "AUTH_SESSION_SECRET",
 }
 
-func Load() (*Config, error) {
+func Load(ctx context.Context) (*Config, error) {
 	v := viper.New()
 	for key, value := range defaults {
 		v.SetDefault(key, value)
@@ -44,6 +45,9 @@ func Load() (*Config, error) {
 		if err := v.BindEnv(key, name); err != nil {
 			return nil, failure.ErrWithTrace(err)
 		}
+	}
+	if err := loadSecrets(ctx, v); err != nil {
+		return nil, err
 	}
 
 	var cfg Config

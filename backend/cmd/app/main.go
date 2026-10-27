@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"chatsmith-mini/configs"
@@ -8,7 +9,7 @@ import (
 )
 
 func main() {
-	cfg, err := configs.Load()
+	cfg, err := configs.Load(context.Background())
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
