@@ -96,22 +96,23 @@ for f in backend/migrations/*.sql; do psql "postgres://chatsmith:<mật khẩu>@
 
 Chỉ chạy lại một file khi biết chắc nó chưa áp dụng. Các file không có `IF NOT EXISTS`.
 
-## 10. Deploy Cloud Run
+## 10. Deploy Cloud Run (GUI)
 
-```bash
-gcloud run deploy ${SERVICE} --region=${REGION} \
-  --image=${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/${SERVICE}:latest \
-  --service-account=${SA} \
-  --add-cloudsql-instances=${PROJECT}:${REGION}:${DB_INSTANCE} \
-  --min-instances=0 --max-instances=2 --timeout=300 --allow-unauthenticated \
-  --set-env-vars=AUTH_COOKIE_SECURE=true,AUTH_PUBLIC_BASE_URL=<URL Cloud Run>,DATABASE_URL=<DSN ở bước 5> \
-  --set-secrets=ANTHROPIC_API_KEY=anthropic-api-key:latest,AUTH_GOOGLE_CLIENT_SECRET=google-client-secret:latest,AUTH_SESSION_SECRET=session-secret:latest
-```
+Form **Create service** (Cloud Run → Create service → Continuously deploy from a repository):
 
-Các biến còn lại (`AUTH_GOOGLE_CLIENT_ID`) đặt bằng `--set-env-vars`. Sau lần deploy đầu, lấy URL từ `gcloud run services describe`, rồi:
+- **Region**: `asia-southeast1`. Authentication: **Allow public access**.
+- **Variables & Secrets → Environment variables** (chỉ biến thường, không có secret):
+  - `GCP_PROJECT_ID` = `chatsmith-mini`
+  - `AUTH_GOOGLE_CLIENT_ID` = Client ID của OAuth client
+  - `AUTH_PUBLIC_BASE_URL` = `https://example.com` (tạm, sửa sau khi có URL)
+  - `AUTH_COOKIE_SECURE` = `true`
+- Không bấm **Reference a secret**. App tự đọc `database-url`, `anthropic-api-key`, `google-client-secret`, `session-secret` từ Secret Manager khi khởi động.
+- **Cloud SQL connections**: `chatsmith-db`.
+- **Security → Service account**: `chatsmith-run` (phải có quyền Secret Manager Secret Accessor và Cloud SQL Client).
+- **Resources**: CPU 1, memory 512 MiB. **Request timeout**: 300 giây.
+- **Revision scaling**: minimum instances 0, maximum 2.
 
-1. Đặt `AUTH_PUBLIC_BASE_URL` bằng URL đó và deploy lại.
-2. Thêm `<URL>/auth/google/callback` vào redirect URI của OAuth client.
+Sau lần deploy đầu, lấy URL của service và làm bước 11.
 
 ## 11. Kiểm tra
 

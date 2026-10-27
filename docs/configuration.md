@@ -26,6 +26,7 @@ File cấu hình mặc định: `backend/configs/dev.config.yaml`. Đổi file b
 
 | Biến môi trường | Mặc định | Ý nghĩa |
 |---|---|---|
+| `GCP_PROJECT_ID` | (trống) | Khi có giá trị, app đọc `database-url`, `anthropic-api-key`, `google-client-secret`, `session-secret` từ Secret Manager của project này (phiên bản `latest`) và bỏ qua biến môi trường tương ứng. Dùng trên Cloud Run; local để trống |
 | `AUTH_GOOGLE_CLIENT_ID` | (bắt buộc) | Client ID của OAuth client kiểu Web application |
 | `AUTH_GOOGLE_CLIENT_SECRET` | (bắt buộc) | Client secret của OAuth client. Không đưa vào repo |
 | `AUTH_PUBLIC_BASE_URL` | (bắt buộc) | URL công khai của app. Redirect URI là `<URL>/auth/google/callback` |
