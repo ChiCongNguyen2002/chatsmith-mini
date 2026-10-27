@@ -2,19 +2,18 @@
   var $ = App.$;
   var state = App.state;
 
+  async function loadMe() {
+    var me = await App.api("GET", "/v1/me");
+    if (me) $("userName").textContent = me.name || me.email;
+    return me;
+  }
   async function boot() {
-    $("userId").textContent = state.user;
     state.items = [];
     state.next = null;
+    if (!(await loadMe())) return;
     await App.loadCatalog();
     await App.loadList(false);
     App.routeFromPath();
-  }
-  function switchUser(id) {
-    state.user = id;
-    App.saveUser(id);
-    history.pushState({}, "", "/");
-    boot();
   }
 
   $("newChat").addEventListener("click", function () {
@@ -26,12 +25,9 @@
     $("input").focus();
   });
   $("more").addEventListener("click", function () { App.loadList(true); });
-  $("newUser").addEventListener("click", function () { switchUser(App.newUUID()); });
-  $("useUser").addEventListener("click", function () {
-    var id = $("pasteUser").value.trim().toLowerCase();
-    if (!App.UUID.test(id)) { App.showError({ status: 400, data: "user id không hợp lệ", rid: "" }); return; }
-    $("pasteUser").value = "";
-    switchUser(id);
+  $("logout").addEventListener("click", async function () {
+    await fetch("/auth/logout", { method: "POST" });
+    location.href = "/";
   });
   $("modelBtn").addEventListener("click", function () {
     var box = $("picker");

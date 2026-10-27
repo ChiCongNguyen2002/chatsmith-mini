@@ -21,3 +21,17 @@ File cấu hình mặc định: `backend/configs/dev.config.yaml`. Đổi file b
 ## Lưu ý
 
 - `PROVIDER.ANTHROPIC_EFFORT` có hai giá trị khác nhau: mặc định trong code là `low`, file dev là `medium`. Với `low`, Haiku có thể bỏ suy nghĩ và trả lời sai bài toán suy luận đã đo. Nên đặt `medium` khi chạy thật.
+
+## Đăng nhập Google (AUTH)
+
+| Biến môi trường | Mặc định | Ý nghĩa |
+|---|---|---|
+| `AUTH_GOOGLE_CLIENT_ID` | (bắt buộc) | Client ID của OAuth client kiểu Web application |
+| `AUTH_GOOGLE_CLIENT_SECRET` | (bắt buộc) | Client secret của OAuth client. Không đưa vào repo |
+| `AUTH_PUBLIC_BASE_URL` | (bắt buộc) | URL công khai của app. Redirect URI là `<URL>/auth/google/callback` |
+| `AUTH_SESSION_SECRET` | (bắt buộc, từ 32 ký tự) | Khoá ký cookie phiên. Tạo bằng `openssl rand -hex 32` |
+| `AUTH_SESSION_TTL` | `168h` | Thời hạn cookie phiên (7 ngày) |
+| `AUTH_STATE_TTL` | `5m` | Thời hạn cookie `state` trong lúc đăng nhập |
+| `AUTH_COOKIE_SECURE` | `true` | Đặt `false` khi chạy trên `http://127.0.0.1` |
+
+Thiếu một khoá bắt buộc thì app không khởi động.

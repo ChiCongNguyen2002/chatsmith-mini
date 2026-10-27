@@ -2,15 +2,6 @@ package conversation
 
 import "time"
 
-type User struct {
-	ID        string    `gorm:"column:id;primaryKey"`
-	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime:false;default:now()"`
-}
-
-func (User) TableName() string {
-	return tableUsers
-}
-
 type Conversation struct {
 	ID        string    `gorm:"column:id;primaryKey;default:gen_random_uuid()" json:"id"`
 	UserID    string    `gorm:"column:user_id" json:"-"`

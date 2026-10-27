@@ -27,7 +27,7 @@ Trạng thái cuối: `completed`, `truncated` (hết giới hạn token), `canc
 
 | Bảng | Nội dung |
 |---|---|
-| `users` | Người dùng (hiện là ID tự sinh) |
+| `users` | Người dùng, gắn với `google_sub` từ Google |
 | `conversations` | Cuộc chat, có `updated_at` để xếp danh sách |
 | `messages` | Tin nhắn, token, chi phí, trạng thái. Chỉ một tin `streaming` cho mỗi cuộc chat |
 | `models` | Danh mục model, giá theo micro-USD cho một triệu token |
@@ -36,7 +36,6 @@ Chi phí: `ceil((token_vào × giá_vào + token_ra × giá_ra) / 1 000 000)`, �
 
 ## Chưa có
 
-- Đăng nhập Google và phiên đăng nhập thật.
 - Gói Free và Pro, giới hạn lượt theo ngày và theo phút.
 - Nhiều nhà cung cấp: OpenAI đã có code nhưng chưa gọi được vì hết credit. Gemini, DeepSeek, Grok chưa có.
 - Tiếp tục stream khi mất kết nối. Hiện tại mất kết nối là dừng lượt đó.

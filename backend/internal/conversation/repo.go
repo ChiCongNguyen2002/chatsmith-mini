@@ -8,7 +8,6 @@ import (
 	"chatsmith-mini/pkg/failure"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Repo struct {
@@ -21,13 +20,7 @@ func newRepo(db databases.PostgresDB) *Repo {
 
 func (r *Repo) Create(ctx context.Context, userID, title string) (*Conversation, error) {
 	created := Conversation{UserID: userID, Title: title}
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&User{ID: userID}).Error; err != nil {
-			return err
-		}
-
-		return tx.Create(&created).Error
-	})
+	err := r.db.WithContext(ctx).Create(&created).Error
 	if err != nil {
 		return nil, failure.ErrWithTrace(err)
 	}

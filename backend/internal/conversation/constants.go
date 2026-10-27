@@ -26,7 +26,6 @@ const (
 )
 
 const (
-	tableUsers         = "users"
 	tableConversations = "conversations"
 	tableMessages      = "messages"
 )
