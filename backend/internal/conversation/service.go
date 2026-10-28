@@ -69,6 +69,18 @@ func (s *Service) Delete(ctx context.Context, userID, conversationID string) err
 	return s.repo.Delete(ctx, conversationID, userID)
 }
 
+func (s *Service) Rename(ctx context.Context, userID, conversationID, title string) error {
+	title = strings.TrimSpace(title)
+	if title == "" || utf8.RuneCountInString(title) > MaxTitleRunes {
+		return failure.New(failure.CodeBadRequest)
+	}
+	if !uid.Valid(conversationID) {
+		return failure.New(failure.CodeNotFound)
+	}
+
+	return s.repo.UpdateTitle(ctx, conversationID, userID, title)
+}
+
 func (s *Service) Messages(ctx context.Context, userID, conversationID string, afterSeq int64, limit int) ([]Message, error) {
 	if _, err := s.Get(ctx, userID, conversationID); err != nil {
 		return nil, err

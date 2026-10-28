@@ -85,12 +85,19 @@ var App = (window.App = {});
       var b = el("button", "item" + (c.id === App.state.active ? " active" : "") + (c.title ? "" : " untitled"));
       b.type = "button";
       var title = el("span", "item-title", c.title || "Untitled");
+      var actions = el("span", "item-actions");
+      var ren = el("span", "item-rename", "✎");
+      ren.addEventListener("click", function (e) {
+        e.stopPropagation();
+        startRename(c, b, title);
+      });
       var del = el("span", "item-delete", "×");
       del.addEventListener("click", function (e) {
         e.stopPropagation();
         confirmDelete(c.id, c.title || "Untitled");
       });
-      b.append(title, del);
+      actions.append(ren, del);
+      b.append(title, actions);
       b.addEventListener("click", function () { openConversation(c.id, true); });
       list.append(b);
     });
@@ -125,6 +132,37 @@ var App = (window.App = {});
       renderHello();
     }
     renderList();
+  }
+  function startRename(conv, btn, titleSpan) {
+    var input = el("input", "rename-input");
+    input.type = "text";
+    input.value = conv.title || "";
+    input.maxLength = 200;
+    titleSpan.replaceWith(input);
+    input.focus();
+    input.select();
+    var done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      var val = input.value.trim();
+      if (val && val !== conv.title) {
+        api("PATCH", "/v1/conversations/" + conv.id, { title: val }).then(function (res) {
+          if (res) {
+            conv.title = val;
+            btn.classList.remove("untitled");
+          }
+          renderList();
+        });
+      } else {
+        renderList();
+      }
+    }
+    input.addEventListener("blur", finish);
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); finish(); }
+      if (e.key === "Escape") { done = true; renderList(); }
+    });
   }
   async function loadList(more) {
     var path = "/v1/conversations?limit=" + PAGE + (more && App.state.next ? "&cursor=" + encodeURIComponent(App.state.next) : "");

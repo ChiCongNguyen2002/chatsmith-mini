@@ -72,3 +72,8 @@ type failedData struct {
 	Code      failure.Code               `json:"code"`
 	RequestID string                     `json:"request_id"`
 }
+
+type searchSourceData struct {
+	URL   string `json:"url"`
+	Title string `json:"title"`
+}

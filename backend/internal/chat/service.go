@@ -108,9 +108,22 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 	)
 	if emitErr == nil {
 		result, streamErr = s.streamers[turn.Model.Provider].Stream(genCtx, provider.Request{
-			Model:           turn.Model.ID,
-			Messages:        turn.Prompt,
-			MaxOutputTokens: s.cfg.MaxOutputTokens,
+			Model:            turn.Model.ID,
+			Messages:         turn.Prompt,
+			MaxOutputTokens:  s.cfg.MaxOutputTokens,
+			SystemPrompt:     s.cfg.SystemPrompt,
+			WebSearchEnabled: s.cfg.WebSearch,
+			OnSearch: func(se provider.SearchEvent) error {
+				switch se.Type {
+				case "started":
+					return emit(Event{Name: EventSearchStarted})
+				case "source":
+					return emit(Event{Name: EventSearchSource, Data: searchSourceData{URL: se.URL, Title: se.Title}})
+				case "completed":
+					return emit(Event{Name: EventSearchCompleted})
+				}
+				return nil
+			},
 		}, func(text string) error {
 			if firstTokenMS == 0 {
 				firstTokenMS = max(1, int(time.Since(started).Milliseconds()))
