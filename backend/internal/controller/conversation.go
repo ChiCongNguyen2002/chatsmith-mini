@@ -78,6 +78,16 @@ func (c *Conversation) List(ctx *gin.Context) {
 	response.Success(ctx, page)
 }
 
+func (c *Conversation) Delete(ctx *gin.Context) {
+	err := c.service.Delete(ctx.Request.Context(), middleware.GetUserID(ctx), ctx.Param(ParamConversationID))
+	if err != nil {
+		respondError(ctx, err)
+		return
+	}
+
+	response.NoContent(ctx)
+}
+
 func (c *Conversation) Messages(ctx *gin.Context) {
 	var query listMessagesQuery
 	if err := ctx.ShouldBindQuery(&query); err != nil {

@@ -61,6 +61,14 @@ func (s *Service) List(ctx context.Context, userID, rawCursor string, limit int)
 	return page, nil
 }
 
+func (s *Service) Delete(ctx context.Context, userID, conversationID string) error {
+	if !uid.Valid(conversationID) {
+		return failure.New(failure.CodeNotFound)
+	}
+
+	return s.repo.Delete(ctx, conversationID, userID)
+}
+
 func (s *Service) Messages(ctx context.Context, userID, conversationID string, afterSeq int64, limit int) ([]Message, error) {
 	if _, err := s.Get(ctx, userID, conversationID); err != nil {
 		return nil, err

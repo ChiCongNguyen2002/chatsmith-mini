@@ -4,37 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chat Smith Mini</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
 <div class="app">
-  <aside class="side">
+  <aside class="side" id="side" hidden>
     <div class="side-top">
-      <button class="btn" id="newChat" type="button">+ New Chat</button>
+      <button class="btn btn-new-chat" id="newChat" type="button">+ New Chat</button>
     </div>
     <div class="recents">Recents</div>
     <div class="list" id="list"></div>
     <button class="btn more" id="more" type="button" hidden>Load more</button>
-    <div class="who">
+    <div class="who" id="userSection" hidden>
       <code id="userName"></code>
-      <button class="btn small" id="logout" type="button">Đăng xuất</button>
+      <button class="btn small" id="logout" type="button">Logout</button>
     </div>
   </aside>
   <main class="main">
-    <div class="topbar">
+    <div class="topbar" hidden>
+      <button class="hamburger" id="hamburger" type="button" aria-label="Menu">&#9776;</button>
       <button class="btn small" id="modelBtn" type="button">Model</button>
       <div class="picker" id="picker" hidden></div>
     </div>
     <div class="banner" id="banner" hidden></div>
     <div class="view" id="view"></div>
-    <div class="composer">
+    <div class="composer" hidden>
       <div class="box">
-        <input type="text" id="input" placeholder="Talk with Chat Smith" maxlength="8000" aria-label="Ô nhập tin nhắn">
-        <button class="btn small" id="send" type="button">Send</button>
-        <button class="btn small" id="stop" type="button" hidden>Stop</button>
+        <textarea id="input" rows="1" placeholder="Talk with Chat Smith" maxlength="8000" aria-label="Message"></textarea>
+        <button class="btn-send" id="send" type="button" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9z"/></svg>
+        </button>
+        <button class="btn-stop" id="stop" type="button" hidden aria-label="Stop">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        </button>
       </div>
     </div>
-    <div class="foot" id="foot">chưa gọi API nào</div>
+    <div class="foot" id="foot" hidden></div>
   </main>
 </div>
 <script src="/static/js/core.js"></script>

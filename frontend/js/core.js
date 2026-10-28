@@ -41,16 +41,27 @@ var App = (window.App = {});
       return null;
     }
     showError(null);
-    return json.data;
+    return json ? json.data : true;
   }
   function showLogin() {
+    $("side").hidden = true;
+    document.querySelector(".topbar").hidden = true;
+    document.querySelector(".composer").hidden = true;
+    document.querySelector(".foot").hidden = true;
     var view = $("view");
     view.replaceChildren();
     var box = el("div", "hello");
-    var link = el("a", "btn", "Đăng nhập bằng Google");
+    var link = el("a", "login-btn", "Sign in with Google");
     link.href = "/auth/google/login";
-    box.append(el("h1", "", "Chat Smith Mini"), el("p", "", "Đăng nhập để xem và tiếp tục các cuộc chat của bạn."), link);
+    box.append(el("p", "", "Welcome to"), el("h1", "", "Chat Smith Mini"), el("p", "subtitle", "Your AI assistant, powered by the latest models"), link);
     view.append(box);
+  }
+  function showApp() {
+    $("side").hidden = false;
+    $("userSection").hidden = false;
+    document.querySelector(".topbar").hidden = false;
+    document.querySelector(".composer").hidden = false;
+    document.querySelector(".foot").hidden = false;
   }
   function groupOf(iso) {
     var d = new Date(iso);
@@ -71,12 +82,49 @@ var App = (window.App = {});
     App.state.items.forEach(function (c) {
       var g = groupOf(c.updated_at);
       if (g !== last) { list.append(el("div", "group", g)); last = g; }
-      var b = el("button", "item" + (c.id === App.state.active ? " active" : "") + (c.title ? "" : " untitled"), c.title || "Untitled");
+      var b = el("button", "item" + (c.id === App.state.active ? " active" : "") + (c.title ? "" : " untitled"));
       b.type = "button";
+      var title = el("span", "item-title", c.title || "Untitled");
+      var del = el("span", "item-delete", "×");
+      del.addEventListener("click", function (e) {
+        e.stopPropagation();
+        confirmDelete(c.id, c.title || "Untitled");
+      });
+      b.append(title, del);
       b.addEventListener("click", function () { openConversation(c.id, true); });
       list.append(b);
     });
     $("more").hidden = !App.state.next;
+  }
+  function confirmDelete(id, title) {
+    var overlay = el("div", "confirm-overlay");
+    var box = el("div", "confirm-box");
+    box.append(el("p", "", "Delete \"" + title + "\"?"));
+    var actions = el("div", "confirm-actions");
+    var cancel = el("button", "btn small", "Cancel");
+    cancel.type = "button";
+    cancel.addEventListener("click", function () { overlay.remove(); });
+    var confirm = el("button", "btn small btn-danger", "Delete");
+    confirm.type = "button";
+    confirm.addEventListener("click", async function () {
+      overlay.remove();
+      await deleteConversation(id);
+    });
+    actions.append(cancel, confirm);
+    box.append(actions);
+    overlay.append(box);
+    document.body.append(overlay);
+  }
+  async function deleteConversation(id) {
+    var res = await api("DELETE", "/v1/conversations/" + id);
+    if (!res) return;
+    App.state.items = App.state.items.filter(function (c) { return c.id !== id; });
+    if (App.state.active === id) {
+      App.state.active = null;
+      history.pushState({}, "", "/" + location.search);
+      renderHello();
+    }
+    renderList();
   }
   async function loadList(more) {
     var path = "/v1/conversations?limit=" + PAGE + (more && App.state.next ? "&cursor=" + encodeURIComponent(App.state.next) : "");
@@ -166,6 +214,7 @@ var App = (window.App = {});
   App.$ = $;
   App.el = el;
   App.showLogin = showLogin;
+  App.showApp = showApp;
   App.showError = showError;
   App.api = api;
   App.usd = usd;

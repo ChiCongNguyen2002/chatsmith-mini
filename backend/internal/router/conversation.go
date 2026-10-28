@@ -16,5 +16,6 @@ func registerConversation(group *gin.RouterGroup, c *controller.Conversation) {
 	group.POST(routeConversations, c.Create)
 	group.GET(routeConversations, c.List)
 	group.GET(routeConversation, c.Get)
+	group.DELETE(routeConversation, c.Delete)
 	group.GET(routeConversationMessages, c.Messages)
 }

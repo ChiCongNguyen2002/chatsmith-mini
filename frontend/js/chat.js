@@ -7,7 +7,10 @@
     $("send").hidden = on;
     $("stop").hidden = !on;
     $("input").disabled = on;
-    if (!on) $("input").focus();
+    if (!on) {
+      $("input").focus();
+      $("input").style.height = "auto";
+    }
   }
   async function readStream(res, handle) {
     var reader = res.body.getReader();
@@ -83,9 +86,15 @@
       return;
     }
     App.showError(null);
+    var thinking = App.el("div", "thinking");
+    thinking.innerHTML = '<span>Thinking</span><div class="thinking-dots"><span></span><span></span><span></span></div>';
+    ui.bubble.replaceChildren(thinking);
     await readStream(res, function (name, d) {
       if (name === "message.delta") {
-        if (!first) first = Math.round(performance.now() - started);
+        if (!first) {
+          first = Math.round(performance.now() - started);
+          ui.bubble.textContent = "";
+        }
         onDelta(ui, d);
       } else if (name === "message.completed") {
         onCompleted(ui, d);
@@ -104,6 +113,8 @@
     var empty = col.querySelector(".empty");
     if (empty) empty.remove();
     $("input").value = "";
+    $("input").style.height = "auto";
+    if (App.closeSidebar) App.closeSidebar();
     App.addMessage(col, { role: "user", content: text, status: "completed" });
     var ui = App.addMessage(col, { role: "assistant", content: "", status: "streaming", model: state.model });
     $("view").scrollTop = $("view").scrollHeight;

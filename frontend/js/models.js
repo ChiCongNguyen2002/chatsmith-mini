@@ -15,7 +15,8 @@
     url.searchParams.set("model", id);
     history.replaceState({}, "", url);
     $("modelBtn").textContent = "Model: " + modelName(id) + " ▾";
-    $("picker").hidden = true;
+    if (App.closePicker) App.closePicker();
+    else $("picker").hidden = true;
   }
   function renderPicker() {
     var box = $("picker");

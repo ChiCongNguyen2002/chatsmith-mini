@@ -55,6 +55,18 @@ func (r *Repo) List(ctx context.Context, userID string, limit int, after *cursor
 	return items, nil
 }
 
+func (r *Repo) Delete(ctx context.Context, conversationID, userID string) error {
+	result := r.db.WithContext(ctx).Where(whereOwnedConversation, conversationID, userID).Delete(&Conversation{})
+	if result.Error != nil {
+		return failure.ErrWithTrace(result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return failure.New(failure.CodeNotFound)
+	}
+
+	return nil
+}
+
 func (r *Repo) Messages(ctx context.Context, conversationID string, afterSeq int64, limit int) ([]Message, error) {
 	items := make([]Message, 0, limit)
 	err := r.db.WithContext(ctx).Where(whereMessagesAfterSeq, conversationID, afterSeq).Order(orderOldestFirst).Limit(limit).Find(&items).Error
