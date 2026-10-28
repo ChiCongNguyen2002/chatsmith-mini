@@ -3,10 +3,13 @@ package chat
 import "time"
 
 const (
-	EventCreated   = "message.created"
-	EventDelta     = "message.delta"
-	EventCompleted = "message.completed"
-	EventFailed    = "message.failed"
+	EventCreated         = "message.created"
+	EventDelta           = "message.delta"
+	EventCompleted       = "message.completed"
+	EventFailed          = "message.failed"
+	EventSearchStarted   = "search.started"
+	EventSearchSource    = "search.source"
+	EventSearchCompleted = "search.completed"
 )
 
 const (

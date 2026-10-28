@@ -89,11 +89,42 @@
     var thinking = App.el("div", "thinking");
     thinking.innerHTML = '<span>Thinking</span><div class="thinking-dots"><span></span><span></span><span></span></div>';
     ui.bubble.replaceChildren(thinking);
+    var searchBlock = null;
+    var sources = [];
     await readStream(res, function (name, d) {
-      if (name === "message.delta") {
+      if (name === "search.started") {
+        searchBlock = App.el("div", "search-block searching");
+        searchBlock.innerHTML = '<span class="search-icon">&#128269;</span><span>Searching the web…</span>';
+        ui.bubble.textContent = "";
+        ui.bubble.append(searchBlock);
+      } else if (name === "search.source") {
+        sources.push(d);
+      } else if (name === "search.completed") {
+        if (searchBlock) {
+          searchBlock.className = "search-block done";
+          var label = App.el("span", "", "Searched " + sources.length + " sources");
+          var toggle = App.el("span", "search-toggle", " ▸");
+          var list = App.el("div", "search-sources hidden");
+          sources.forEach(function (s) {
+            var a = App.el("a", "search-link", s.title || s.url);
+            a.href = s.url;
+            a.target = "_blank";
+            a.rel = "noopener";
+            list.append(a);
+          });
+          searchBlock.replaceChildren(App.el("span", "search-icon", "✓"));
+          searchBlock.append(label, toggle, list);
+          searchBlock.addEventListener("click", function () {
+            var hidden = list.classList.toggle("hidden");
+            toggle.textContent = hidden ? " ▸" : " ▾";
+          });
+          sources = [];
+        }
+      } else if (name === "message.delta") {
         if (!first) {
           first = Math.round(performance.now() - started);
-          ui.bubble.textContent = "";
+          var t = ui.bubble.querySelector(".thinking");
+          if (t) t.remove();
         }
         onDelta(ui, d);
       } else if (name === "message.completed") {

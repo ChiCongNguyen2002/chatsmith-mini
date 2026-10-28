@@ -11,10 +11,20 @@ type Message struct {
 	Content string `json:"content"`
 }
 
+type SearchEvent struct {
+	Type  string
+	Query string
+	URL   string
+	Title string
+}
+
 type Request struct {
-	Model           string
-	Messages        []Message
-	MaxOutputTokens int
+	Model            string
+	Messages         []Message
+	MaxOutputTokens  int
+	SystemPrompt     string
+	WebSearchEnabled bool
+	OnSearch         func(SearchEvent) error
 }
 
 type Result struct {

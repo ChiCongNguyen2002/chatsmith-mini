@@ -88,6 +88,26 @@ func (c *Conversation) Delete(ctx *gin.Context) {
 	response.NoContent(ctx)
 }
 
+type renameConversationRequest struct {
+	Title string `json:"title" binding:"required"`
+}
+
+func (c *Conversation) Rename(ctx *gin.Context) {
+	var req renameConversationRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		respondError(ctx, failure.New(failure.CodeBadRequest))
+		return
+	}
+
+	err := c.service.Rename(ctx.Request.Context(), middleware.GetUserID(ctx), ctx.Param(ParamConversationID), req.Title)
+	if err != nil {
+		respondError(ctx, err)
+		return
+	}
+
+	response.NoContent(ctx)
+}
+
 func (c *Conversation) Messages(ctx *gin.Context) {
 	var query listMessagesQuery
 	if err := ctx.ShouldBindQuery(&query); err != nil {

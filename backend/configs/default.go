@@ -28,6 +28,8 @@ const (
 	KeyChatContextTokens        = "CHAT.CONTEXT_TOKENS"
 	KeyChatTimeout              = "CHAT.TIMEOUT"
 	KeyChatDailyBudgetUSD       = "CHAT.DAILY_BUDGET_USD"
+	KeyChatSystemPrompt         = "CHAT.SYSTEM_PROMPT"
+	KeyChatWebSearch            = "CHAT.WEB_SEARCH"
 	KeyAuthGoogleClientID       = "AUTH.GOOGLE_CLIENT_ID"
 	KeyAuthGoogleClientSecret   = "AUTH.GOOGLE_CLIENT_SECRET"
 	KeyAuthPublicBaseURL        = "AUTH.PUBLIC_BASE_URL"
@@ -60,6 +62,8 @@ const (
 	DefaultContextTokens     = 24000
 	DefaultChatTimeout       = 120 * time.Second
 	DefaultDailyBudgetUSD    = 2.0
+	DefaultSystemPrompt      = "Bạn là Chat Smith, trợ lý AI. Trả lời ngắn gọn, chính xác, đúng trọng tâm. Dùng markdown khi cần. Không lặp lại câu hỏi. Không mở đầu dài dòng."
+	DefaultWebSearch         = true
 	DefaultSessionTTL        = 168 * time.Hour
 	DefaultStateTTL          = 5 * time.Minute
 	DefaultCookieSecure      = true
@@ -88,6 +92,8 @@ var defaults = map[string]any{
 	KeyChatContextTokens:        DefaultContextTokens,
 	KeyChatTimeout:              DefaultChatTimeout,
 	KeyChatDailyBudgetUSD:       DefaultDailyBudgetUSD,
+	KeyChatSystemPrompt:         DefaultSystemPrompt,
+	KeyChatWebSearch:            DefaultWebSearch,
 	KeyAuthSessionTTL:           DefaultSessionTTL,
 	KeyAuthStateTTL:             DefaultStateTTL,
 	KeyAuthCookieSecure:         DefaultCookieSecure,

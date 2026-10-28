@@ -54,6 +54,7 @@ body {
 .item {
   display: flex;
   align-items: center;
+  gap: 4px;
   width: 100%;
   background: none;
   border: 0;
@@ -72,19 +73,30 @@ body {
 .item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-delete {
   flex-shrink: 0;
-  display: none;
   background: none;
   border: 0;
   color: var(--muted);
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 2px 4px;
   border-radius: 4px;
   font-size: 13px;
   line-height: 1;
   transition: color var(--transition);
 }
-.item:hover .item-delete { display: block; }
+.item-actions { display: none; flex-shrink: 0; gap: 2px; }
+.item:hover .item-actions { display: flex; }
+.item-rename {
+  flex-shrink: 0; background: none; border: 0; color: var(--muted);
+  cursor: pointer; padding: 2px 4px; border-radius: 4px; font-size: 12px;
+  line-height: 1; transition: color var(--transition);
+}
+.item-rename:hover { color: var(--accent); }
 .item-delete:hover { color: var(--danger); }
+.rename-input {
+  flex: 1; min-width: 0; background: var(--surface); color: var(--fg);
+  border: 1px solid var(--accent); border-radius: 4px; padding: 2px 6px;
+  font: inherit; font-size: 13px; outline: none;
+}
 .more { margin: 4px 8px; }
 .who {
   padding: 12px;
@@ -329,3 +341,23 @@ body {
   .msg { max-width: 92%; }
   .picker { left: 8px; width: calc(100vw - 16px); }
 }
+
+.search-block {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; border-radius: 10px;
+  background: var(--accent-soft); color: var(--fg-secondary);
+  font-size: 13px; cursor: pointer; margin-bottom: 6px;
+}
+.search-block.searching { animation: pulse-search 1.5s ease-in-out infinite; }
+@keyframes pulse-search { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
+.search-block.done { cursor: pointer; }
+.search-icon { font-size: 15px; flex-shrink: 0; }
+.search-toggle { color: var(--muted); font-size: 12px; }
+.search-sources { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.search-sources.hidden { display: none; }
+.search-link {
+  display: block; color: var(--accent); font-size: 12px;
+  text-decoration: none; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.search-link:hover { text-decoration: underline; }
