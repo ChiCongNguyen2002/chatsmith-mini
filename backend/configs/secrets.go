@@ -21,8 +21,6 @@ const (
 	secretDatabaseURL        = "database-url"
 	secretAnthropicAPIKey    = "anthropic-api-key"
 	secretGoogleClientSecret = "google-client-secret"
-	secretGitHubClientSecret = "github-client-secret"
-	secretFacebookAppSecret  = "facebook-app-secret"
 	secretSessionSecret      = "session-secret"
 )
 
@@ -30,8 +28,6 @@ var managedSecrets = map[string]string{
 	KeyDatabaseURL:            secretDatabaseURL,
 	KeyProviderAnthropicKey:   secretAnthropicAPIKey,
 	KeyAuthGoogleClientSecret: secretGoogleClientSecret,
-	KeyAuthGitHubClientSecret: secretGitHubClientSecret,
-	KeyAuthFacebookAppSecret:  secretFacebookAppSecret,
 	KeyAuthSessionSecret:      secretSessionSecret,
 }
 

@@ -5,9 +5,7 @@ import "strings"
 type AuthProvider string
 
 const (
-	AuthProviderGoogle   AuthProvider = "google"
-	AuthProviderGitHub   AuthProvider = "github"
-	AuthProviderFacebook AuthProvider = "facebook"
+	AuthProviderGoogle AuthProvider = "google"
 )
 
 func AuthCallbackPath(name AuthProvider) string {

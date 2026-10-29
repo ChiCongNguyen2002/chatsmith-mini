@@ -25,10 +25,6 @@ type Config struct {
 type AuthConfig struct {
 	GoogleClientID     string        `mapstructure:"GOOGLE_CLIENT_ID"`
 	GoogleClientSecret string        `mapstructure:"GOOGLE_CLIENT_SECRET"`
-	GitHubClientID     string        `mapstructure:"GITHUB_CLIENT_ID"`
-	GitHubClientSecret string        `mapstructure:"GITHUB_CLIENT_SECRET"`
-	FacebookAppID      string        `mapstructure:"FACEBOOK_APP_ID"`
-	FacebookAppSecret  string        `mapstructure:"FACEBOOK_APP_SECRET"`
 	PublicBaseURL      string        `mapstructure:"PUBLIC_BASE_URL"`
 	SessionSecret      string        `mapstructure:"SESSION_SECRET"`
 	SessionTTL         time.Duration `mapstructure:"SESSION_TTL"`
@@ -126,9 +122,5 @@ func (c *Config) validate() error {
 }
 
 func (a AuthConfig) HasProvider() bool {
-	google := a.GoogleClientID != "" && a.GoogleClientSecret != ""
-	github := a.GitHubClientID != "" && a.GitHubClientSecret != ""
-	facebook := a.FacebookAppID != "" && a.FacebookAppSecret != ""
-
-	return google || github || facebook
+	return a.GoogleClientID != "" && a.GoogleClientSecret != ""
 }
