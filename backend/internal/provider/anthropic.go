@@ -55,15 +55,9 @@ type anthropicBody struct {
 }
 
 type anthropicTool struct {
-	Type     string             `json:"type"`
-	Name     string             `json:"name"`
-	MaxUses  int                `json:"max_uses,omitempty"`
-	Location *anthropicLocation `json:"user_location,omitempty"`
-}
-
-type anthropicLocation struct {
 	Type    string `json:"type"`
-	Country string `json:"country"`
+	Name    string `json:"name"`
+	MaxUses int    `json:"max_uses,omitempty"`
 }
 
 type anthropicOutput struct {
@@ -125,10 +119,6 @@ func (a *Anthropic) Stream(ctx context.Context, req Request, onDelta func(string
 			Type:    searchToolType,
 			Name:    searchToolName,
 			MaxUses: maxSearchUses,
-			Location: &anthropicLocation{
-				Type:    "approximate",
-				Country: "VN",
-			},
 		}}
 	}
 
