@@ -13,6 +13,7 @@ type CreateModuleDTO struct {
 	Catalog       *catalog.Service
 	Conversations *conversation.Service
 	Streamers     map[constants.Provider]Streamer
+	Classifier    SearchClassifier
 	Config        configs.ChatConfig
 }
 
@@ -21,5 +22,5 @@ type Module struct {
 }
 
 func NewModule(dto *CreateModuleDTO) *Module {
-	return &Module{Service: newService(newRepo(dto.DB), dto.Catalog, dto.Conversations, dto.Streamers, dto.Config)}
+	return &Module{Service: newService(newRepo(dto.DB), dto.Catalog, dto.Conversations, dto.Streamers, dto.Classifier, dto.Config)}
 }

@@ -60,15 +60,18 @@ type ProviderConfig struct {
 }
 
 type ChatConfig struct {
-	DefaultModel    string        `mapstructure:"DEFAULT_MODEL"`
-	MaxMessageChars int           `mapstructure:"MAX_MESSAGE_CHARS"`
-	MaxBodyBytes    int64         `mapstructure:"MAX_BODY_BYTES"`
-	MaxOutputTokens int           `mapstructure:"MAX_OUTPUT_TOKENS"`
-	ContextTokens   int           `mapstructure:"CONTEXT_TOKENS"`
-	Timeout         time.Duration `mapstructure:"TIMEOUT"`
-	DailyBudgetUSD  float64       `mapstructure:"DAILY_BUDGET_USD"`
-	SystemPrompt    string        `mapstructure:"SYSTEM_PROMPT"`
-	WebSearch       bool          `mapstructure:"WEB_SEARCH"`
+	DefaultModel      string        `mapstructure:"DEFAULT_MODEL"`
+	MaxMessageChars   int           `mapstructure:"MAX_MESSAGE_CHARS"`
+	MaxBodyBytes      int64         `mapstructure:"MAX_BODY_BYTES"`
+	MaxOutputTokens   int           `mapstructure:"MAX_OUTPUT_TOKENS"`
+	ContextTokens     int           `mapstructure:"CONTEXT_TOKENS"`
+	Timeout           time.Duration `mapstructure:"TIMEOUT"`
+	DailyBudgetUSD    float64       `mapstructure:"DAILY_BUDGET_USD"`
+	SystemPrompt      string        `mapstructure:"SYSTEM_PROMPT"`
+	WebSearch         bool          `mapstructure:"WEB_SEARCH"`
+	ClassifierModel   string        `mapstructure:"CLASSIFIER_MODEL"`
+	ClassifierPrompt  string        `mapstructure:"CLASSIFIER_PROMPT"`
+	ClassifierTimeout time.Duration `mapstructure:"CLASSIFIER_TIMEOUT"`
 }
 
 func (c ChatConfig) DailyBudgetMicro() int64 {

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"net/http"
 	"os/signal"
 	"syscall"
 
@@ -32,7 +33,8 @@ func Run(cfg *configs.Config) error {
 		return err
 	}
 
-	streamers := newStreamers(cfg.Provider)
+	httpClient := provider.NewHTTPClient()
+	streamers := newStreamers(cfg.Provider, httpClient)
 	available := func(p constants.Provider) bool { _, ok := streamers[p]; return ok }
 
 	users := user.NewModule(&user.CreateModuleDTO{DB: db})
@@ -42,11 +44,13 @@ func Run(cfg *configs.Config) error {
 	if err := catalogs.Service.CheckDefault(ctx); err != nil {
 		return err
 	}
+	classifier := provider.NewClassifier(cfg.Provider, cfg.Chat, httpClient)
 	chats := chat.NewModule(&chat.CreateModuleDTO{
 		DB:            db,
 		Catalog:       catalogs.Service,
 		Conversations: conversations.Service,
 		Streamers:     streamers,
+		Classifier:    classifier,
 		Config:        cfg.Chat,
 	})
 
@@ -63,8 +67,7 @@ func Run(cfg *configs.Config) error {
 	return server.New(cfg.Server, log, engine).Start(ctx)
 }
 
-func newStreamers(cfg configs.ProviderConfig) map[constants.Provider]chat.Streamer {
-	client := provider.NewHTTPClient()
+func newStreamers(cfg configs.ProviderConfig, client *http.Client) map[constants.Provider]chat.Streamer {
 	streamers := make(map[constants.Provider]chat.Streamer)
 	if cfg.OpenAIAPIKey != "" {
 		streamers[constants.ProviderOpenAI] = provider.NewOpenAI(cfg, client)

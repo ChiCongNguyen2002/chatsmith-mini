@@ -13,6 +13,22 @@ const (
 )
 
 const (
+	finishTimeout     = 5 * time.Second
+	logChatFinished   = "chat_finished"
+	logChatFailed     = "chat_failed"
+	logChatNotSaved   = "chat_result_not_saved"
+	logKeyModel       = "model"
+	logKeyStatus      = "status"
+	logKeyInputTokens = "input_tokens"
+	logKeyOutputToken = "output_tokens"
+	logKeyCostMicro   = "cost_micro_usd"
+	logKeyFirstToken  = "first_token_ms"
+	logKeyLatency     = "latency_ms"
+	logKeyEstimated   = "usage_estimated"
+	logKeyConvID      = "conversation_id"
+)
+
+const (
 	microPerMTok     = 1_000_000
 	charsPerToken    = 4
 	tokenOverhead    = 4

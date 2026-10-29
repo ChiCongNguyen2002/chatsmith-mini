@@ -15,24 +15,12 @@ import (
 	"chatsmith-mini/pkg/logger"
 )
 
-const (
-	finishTimeout     = 5 * time.Second
-	logChatFinished   = "chat_finished"
-	logChatFailed     = "chat_failed"
-	logChatNotSaved   = "chat_result_not_saved"
-	logKeyModel       = "model"
-	logKeyStatus      = "status"
-	logKeyInputTokens = "input_tokens"
-	logKeyOutputToken = "output_tokens"
-	logKeyCostMicro   = "cost_micro_usd"
-	logKeyFirstToken  = "first_token_ms"
-	logKeyLatency     = "latency_ms"
-	logKeyEstimated   = "usage_estimated"
-	logKeyConvID      = "conversation_id"
-)
-
 type Streamer interface {
 	Stream(ctx context.Context, req provider.Request, onDelta func(string) error) (provider.Result, error)
+}
+
+type SearchClassifier interface {
+	NeedsSearch(ctx context.Context, lastMessage string) bool
 }
 
 type Service struct {
@@ -40,11 +28,12 @@ type Service struct {
 	catalog       *catalog.Service
 	conversations *conversation.Service
 	streamers     map[constants.Provider]Streamer
+	classifier    SearchClassifier
 	cfg           configs.ChatConfig
 }
 
-func newService(repo *Repo, cat *catalog.Service, conversations *conversation.Service, streamers map[constants.Provider]Streamer, cfg configs.ChatConfig) *Service {
-	return &Service{repo: repo, catalog: cat, conversations: conversations, streamers: streamers, cfg: cfg}
+func newService(repo *Repo, cat *catalog.Service, conversations *conversation.Service, streamers map[constants.Provider]Streamer, classifier SearchClassifier, cfg configs.ChatConfig) *Service {
+	return &Service{repo: repo, catalog: cat, conversations: conversations, streamers: streamers, classifier: classifier, cfg: cfg}
 }
 
 func (s *Service) Start(ctx context.Context, in StartInput) (*Turn, error) {
@@ -107,12 +96,13 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 		streamErr    error
 	)
 	if emitErr == nil {
+		webSearch := s.cfg.WebSearch && s.classifier.NeedsSearch(genCtx, turn.UserMessage.Content)
 		result, streamErr = s.streamers[turn.Model.Provider].Stream(genCtx, provider.Request{
 			Model:            turn.Model.ID,
 			Messages:         turn.Prompt,
 			MaxOutputTokens:  s.cfg.MaxOutputTokens,
 			SystemPrompt:     s.cfg.SystemPrompt,
-			WebSearchEnabled: s.cfg.WebSearch,
+			WebSearchEnabled: webSearch,
 			OnSearch: func(se provider.SearchEvent) error {
 				switch se.Type {
 				case "started":
