@@ -29,6 +29,7 @@ const (
 )
 
 const (
+	continuePrompt   = "Tiếp tục đúng từ chỗ bạn vừa dừng. Không lặp lại phần đã viết và không mở đầu lại."
 	microPerMTok     = 1_000_000
 	charsPerToken    = 4
 	tokenOverhead    = 4
@@ -41,7 +42,7 @@ const (
 const (
 	whereStaleStreaming   = "conversation_id = ? AND status = ? AND created_at < ?"
 	whereConversationRows = "conversation_id = ?"
-	whereHistory          = "conversation_id = ? AND status = ? AND seq < ?"
+	whereHistory          = "conversation_id = ? AND status IN ? AND seq < ?"
 	whereSpent            = "role = ? AND created_at >= ?"
 	selectMaxSeq          = "COALESCE(MAX(seq), 0)"
 	selectSumCost         = "COALESCE(SUM(cost_micro_usd), 0)"
@@ -61,5 +62,6 @@ SET content = ?, status = ?, input_tokens = ?, output_tokens = ?, cost_micro_usd
     usage_estimated = ?, first_token_ms = ?, latency_ms = ?
 WHERE id = ?`
 
-	touchOnlySQL = `UPDATE conversations SET updated_at = now() WHERE id = ?`
+	touchOnlySQL    = `UPDATE conversations SET updated_at = now() WHERE id = ?`
+	updateStatusSQL = `UPDATE messages SET status = ? WHERE id = ? AND status = ?`
 )

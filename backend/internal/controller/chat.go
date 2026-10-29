@@ -46,6 +46,24 @@ func (c *Chat) Send(ctx *gin.Context) {
 		return
 	}
 
+	c.run(ctx, turn)
+}
+
+func (c *Chat) Continue(ctx *gin.Context) {
+	turn, err := c.service.StartContinue(ctx.Request.Context(), chat.ContinueInput{
+		UserID:         middleware.GetUserID(ctx),
+		ConversationID: ctx.Param(ParamConversationID),
+		RequestID:      ctx.GetString(string(constants.ContextKeyRequestID)),
+	})
+	if err != nil {
+		respondError(ctx, err)
+		return
+	}
+
+	c.run(ctx, turn)
+}
+
+func (c *Chat) run(ctx *gin.Context, turn *chat.Turn) {
 	stream := newEventStream(ctx)
 	defer stream.stop()
 

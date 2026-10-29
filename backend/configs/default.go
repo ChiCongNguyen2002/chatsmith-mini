@@ -58,6 +58,7 @@ const (
 	DefaultOpenAIBaseURL     = "https://api.openai.com"
 	DefaultAnthropicBaseURL  = "https://api.anthropic.com"
 	DefaultProviderEffort    = "low"
+	DefaultAnthropicEffort   = "medium"
 	DefaultChatModel         = "claude-haiku-5-5"
 	DefaultMaxMessageChars   = 8000
 	DefaultMaxBodyBytes      = 65536
@@ -65,7 +66,7 @@ const (
 	DefaultContextTokens     = 24000
 	DefaultChatTimeout       = 120 * time.Second
 	DefaultDailyBudgetUSD    = 2.0
-	DefaultSystemPrompt      = "Bạn là Chat Smith, trợ lý AI. Trả lời ngắn gọn, chính xác, đúng trọng tâm. Dùng markdown khi cần. Không lặp lại câu hỏi. Không mở đầu dài dòng. Chỉ dùng web search khi người dùng hỏi thông tin thực tế cần tra cứu (giá cả, tin tức, thời tiết, sự kiện). Không search cho chào hỏi hay câu hỏi thông thường."
+	DefaultSystemPrompt      = "Bạn là Chat Smith, trợ lý AI. Trả lời ngắn gọn, chính xác, đúng trọng tâm. Dùng markdown khi cần. Không lặp lại câu hỏi. Không mở đầu dài dòng. Chỉ dùng web search khi người dùng hỏi thông tin thực tế cần tra cứu (giá cả, tin tức, thời tiết, sự kiện). Không search cho chào hỏi hay câu hỏi thông thường. Câu hỏi đơn giản thì trả lời ngắn; chỉ viết dài khi câu hỏi cần giải thích chi tiết."
 	DefaultWebSearch         = true
 	DefaultClassifierModel   = "claude-haiku-4-20250514"
 	DefaultClassifierPrompt  = `Classify the user's last message. Reply with exactly one word: "search" if the message asks for real-time, current, or factual information that requires web lookup (prices, news, weather, events, specific data). Reply "chat" for greetings, casual conversation, general knowledge, math, coding, or anything answerable without a web search. One word only.`
@@ -90,7 +91,7 @@ var defaults = map[string]any{
 	KeyProviderOpenAIBaseURL:    DefaultOpenAIBaseURL,
 	KeyProviderOpenAIEffort:     DefaultProviderEffort,
 	KeyProviderAnthropicBaseURL: DefaultAnthropicBaseURL,
-	KeyProviderAnthropicEffort:  DefaultProviderEffort,
+	KeyProviderAnthropicEffort:  DefaultAnthropicEffort,
 	KeyChatDefaultModel:         DefaultChatModel,
 	KeyChatMaxMessageChars:      DefaultMaxMessageChars,
 	KeyChatMaxBodyBytes:         DefaultMaxBodyBytes,

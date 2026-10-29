@@ -40,10 +40,14 @@ func usageFor(result provider.Result, status conversation.MessageStatus, content
 }
 
 func (s *Service) abandon(ctx context.Context, conversationID, messageID string) {
+	s.abandonWith(ctx, finishInput{conversationID: conversationID, messageID: messageID, status: conversation.StatusFailed})
+}
+
+func (s *Service) abandonWith(ctx context.Context, in finishInput) {
 	saveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), finishTimeout)
 	defer cancel()
 
-	_ = s.repo.Finish(saveCtx, finishInput{conversationID: conversationID, messageID: messageID, status: conversation.StatusFailed})
+	_ = s.repo.Finish(saveCtx, in)
 }
 
 func (s *Service) emitFailed(emit func(Event) error, turn *Turn, code failure.Code) {

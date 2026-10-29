@@ -96,7 +96,7 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 		streamErr    error
 	)
 	if emitErr == nil {
-		webSearch := s.cfg.WebSearch && s.classifier.NeedsSearch(genCtx, turn.UserMessage.Content)
+		webSearch := turn.Prior == nil && s.cfg.WebSearch && s.classifier.NeedsSearch(genCtx, turn.UserMessage.Content)
 		result, streamErr = s.streamers[turn.Model.Provider].Stream(genCtx, provider.Request{
 			Model:            turn.Model.ID,
 			Messages:         turn.Prompt,
@@ -131,6 +131,7 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 	}
 	usage := usageFor(result, status, content.String(), turn.Prompt)
 	costMicro := cost(usage, turn.Model.InputMicro, turn.Model.OutputMicro)
+	status, saved, usage, costMicro := turn.Prior.settle(status, content.String(), usage, costMicro)
 	latencyMS := int(time.Since(started).Milliseconds())
 
 	var firstToken *int
@@ -143,7 +144,7 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 	saveErr := s.repo.Finish(saveCtx, finishInput{
 		conversationID: turn.ConversationID,
 		messageID:      turn.Assistant.ID,
-		content:        content.String(),
+		content:        saved,
 		status:         status,
 		usage:          usage,
 		costMicroUSD:   costMicro,

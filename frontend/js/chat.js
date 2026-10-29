@@ -68,18 +68,20 @@
   function onCompleted(ui, d) {
     ui.chip.textContent = d.model + (d.status !== "completed" ? " · " + d.status : "") + " · " + App.usd(d.cost_micro_usd) + " · TTFT " + d.first_token_ms + " ms · " + d.latency_ms + " ms";
     App.markStatus(ui, d.status);
+    if (d.status === "truncated") App.showContinue(ui, state.active);
+    else App.removeContinue();
   }
   function onFailed(ui, d) {
     App.markStatus(ui, "failed");
     ui.chip.textContent = ui.chip.textContent + " " + d.code + " · request_id " + d.request_id;
   }
-  async function streamReply(text, ui, convId) {
+  async function streamReply(url, body, ui, convId) {
     var started = performance.now();
     var first = 0;
-    var res = await fetch("/v1/conversations/" + convId + "/messages", {
+    var res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text, model: state.model }),
+      body: JSON.stringify(body),
       signal: state.abort.signal
     });
     var rid = res.headers.get("X-Request-Id") || "";
@@ -87,13 +89,14 @@
       var j = null;
       try { j = await res.json(); } catch (e) { void e; }
       App.showError({ status: res.status, data: j && j.data, rid: rid });
-      ui.row.remove();
+      if (ui.continuing) App.showContinue(ui, convId);
+      else ui.row.remove();
       return;
     }
     App.showError(null);
     var thinking = App.el("div", "thinking");
     thinking.innerHTML = '<span>Thinking</span><div class="thinking-dots"><span></span><span></span><span></span></div>';
-    ui.bubble.replaceChildren(thinking);
+    ui.bubble.append(thinking);
     var searchBlock = null;
     var sources = [];
     await readStream(res, function (name, d) {
@@ -153,10 +156,23 @@
     App.addMessage(col, { role: "user", content: text, status: "completed" });
     var ui = App.addMessage(col, { role: "assistant", content: "", status: "streaming", model: state.model });
     $("view").scrollTop = $("view").scrollHeight;
+    await runStream("/v1/conversations/" + convId + "/messages", { content: text, model: state.model }, ui, convId);
+  }
+  async function continueTurn(convId, ui) {
+    if (state.busy) return;
+    App.removeContinue();
+    ui.continuing = true;
+    ui.mdContent = App.el("div", "md-content");
+    ui.bubble.replaceChildren(ui.mdContent);
+    App.renderMd(ui.mdContent, ui.mdBuf);
+    $("view").scrollTop = $("view").scrollHeight;
+    await runStream("/v1/conversations/" + convId + "/continue", {}, ui, convId);
+  }
+  async function runStream(url, body, ui, convId) {
     state.abort = new AbortController();
     setBusy(true);
     try {
-      await streamReply(text, ui, convId);
+      await streamReply(url, body, ui, convId);
     } catch (e) {
       if (e.name !== "AbortError") App.showError({ status: 0, data: "mất kết nối khi stream (" + e.name + ")", rid: "" });
     } finally {
@@ -169,4 +185,5 @@
 
   App.setBusy = setBusy;
   App.send = send;
+  App.continueTurn = continueTurn;
 })(App);
