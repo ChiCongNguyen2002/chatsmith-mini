@@ -38,13 +38,11 @@ func (r *Repo) Begin(ctx context.Context, conversationID, content, title, model 
 	assistant := conversation.Message{ConversationID: conversationID, Role: conversation.RoleAssistant, Status: conversation.StatusStreaming, Model: &model}
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		stale := tx.Model(&conversation.Message{}).Where(whereStaleStreaming, conversationID, conversation.StatusStreaming, staleBefore)
-		if err := stale.Update(columnStatus, conversation.StatusFailed).Error; err != nil {
+		if err := failStale(tx, conversationID, staleBefore); err != nil {
 			return err
 		}
-
-		var maxSeq int64
-		if err := tx.Model(&conversation.Message{}).Select(selectMaxSeq).Where(whereConversationRows, conversationID).Scan(&maxSeq).Error; err != nil {
+		maxSeq, err := lastSeq(tx, conversationID)
+		if err != nil {
 			return err
 		}
 		user.Seq, assistant.Seq = maxSeq+1, maxSeq+2
@@ -68,11 +66,62 @@ func (r *Repo) Begin(ctx context.Context, conversationID, content, title, model 
 	return user, assistant, nil
 }
 
+func (r *Repo) BeginContinue(ctx context.Context, truncated conversation.Message, staleBefore time.Time) (conversation.Message, error) {
+	var affected int64
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := failStale(tx, truncated.ConversationID, staleBefore); err != nil {
+			return err
+		}
+		res := tx.Exec(updateStatusSQL, conversation.StatusStreaming, truncated.ID, conversation.StatusTruncated)
+		if res.Error != nil {
+			return res.Error
+		}
+		affected = res.RowsAffected
+
+		return tx.Exec(touchOnlySQL, truncated.ConversationID).Error
+	})
+	if isUniqueViolation(err) {
+		return truncated, failure.New(failure.CodeConversationBusy)
+	}
+	if err != nil {
+		return truncated, failure.ErrWithTrace(err)
+	}
+	if affected != 1 {
+		return truncated, failure.New(failure.CodeBadRequest)
+	}
+	truncated.Status = conversation.StatusStreaming
+
+	return truncated, nil
+}
+
+func (r *Repo) Latest(ctx context.Context, conversationID string) (conversation.Message, error) {
+	var item conversation.Message
+	err := r.db.WithContext(ctx).Where(whereConversationRows, conversationID).Order(orderNewestSeqFirst).Limit(1).Find(&item).Error
+	if err != nil {
+		return item, failure.ErrWithTrace(err)
+	}
+
+	return item, nil
+}
+
+func failStale(tx *gorm.DB, conversationID string, staleBefore time.Time) error {
+	stale := tx.Model(&conversation.Message{}).Where(whereStaleStreaming, conversationID, conversation.StatusStreaming, staleBefore)
+
+	return stale.Update(columnStatus, conversation.StatusFailed).Error
+}
+
+func lastSeq(tx *gorm.DB, conversationID string) (int64, error) {
+	var maxSeq int64
+	err := tx.Model(&conversation.Message{}).Select(selectMaxSeq).Where(whereConversationRows, conversationID).Scan(&maxSeq).Error
+
+	return maxSeq, err
+}
+
 func (r *Repo) History(ctx context.Context, conversationID string, beforeSeq int64) ([]conversation.Message, error) {
 	items := make([]conversation.Message, 0, maxHistoryRows)
 	err := r.db.WithContext(ctx).
 		Select(columnRole, columnContent).
-		Where(whereHistory, conversationID, conversation.StatusCompleted, beforeSeq).
+		Where(whereHistory, conversationID, []conversation.MessageStatus{conversation.StatusCompleted, conversation.StatusTruncated}, beforeSeq).
 		Order(orderNewestSeqFirst).
 		Limit(maxHistoryRows).
 		Find(&items).Error

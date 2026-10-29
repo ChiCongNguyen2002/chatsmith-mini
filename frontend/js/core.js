@@ -201,6 +201,20 @@ var App = (window.App = {});
       ui.notice = el("div", "notice", TRUNCATED_NOTICE);
       ui.row.insertBefore(ui.notice, ui.chip);
     }
+    if (status !== "truncated" && ui.notice) {
+      ui.notice.remove();
+      ui.notice = null;
+    }
+  }
+  function removeContinue() {
+    $("view").querySelectorAll(".continue-btn").forEach(function (b) { b.remove(); });
+  }
+  function showContinue(ui, convId) {
+    removeContinue();
+    var btn = el("button", "btn small continue-btn", "Tiếp tục");
+    btn.type = "button";
+    btn.addEventListener("click", function () { App.continueTurn(convId, ui); });
+    ui.row.insertBefore(btn, ui.chip);
   }
   function addMessage(col, m) {
     var row = el("div", "msg " + m.role);
@@ -211,7 +225,7 @@ var App = (window.App = {});
       bubble.textContent = m.content || "";
     }
     var chip = el("div", "chip", chipText(m));
-    var ui = { row: row, bubble: bubble, chip: chip, notice: null, mdBuf: "" };
+    var ui = { row: row, bubble: bubble, chip: chip, notice: null, mdBuf: m.content || "", mdContent: null, model: m.model };
     row.append(bubble, chip);
     col.append(row);
     markStatus(ui, m.status);
@@ -223,7 +237,9 @@ var App = (window.App = {});
     var col = el("div", "col");
     col.append(el("h2", "title", c.title || "Untitled"), el("div", "meta", "Cập nhật " + new Date(c.updated_at).toLocaleString() + " · " + msgs.length + " tin"));
     if (msgs.length === 0) col.append(el("p", "empty", "Cuộc trò chuyện chưa có tin nhắn."));
-    msgs.forEach(function (m) { addMessage(col, m); });
+    var last = null;
+    msgs.forEach(function (m) { last = addMessage(col, m); });
+    if (last && msgs[msgs.length - 1].status === "truncated") showContinue(last, c.id);
     view.append(col);
     view.scrollTop = view.scrollHeight;
   }
@@ -267,6 +283,8 @@ var App = (window.App = {});
   App.api = api;
   App.usd = usd;
   App.renderMd = renderMd;
+  App.showContinue = showContinue;
+  App.removeContinue = removeContinue;
   App.chipText = chipText;
   App.markStatus = markStatus;
   App.addMessage = addMessage;

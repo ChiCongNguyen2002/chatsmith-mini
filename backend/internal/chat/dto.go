@@ -15,6 +15,12 @@ type StartInput struct {
 	RequestID      string
 }
 
+type ContinueInput struct {
+	UserID         string
+	ConversationID string
+	RequestID      string
+}
+
 type Turn struct {
 	ConversationID string
 	UserMessage    conversation.Message
@@ -22,6 +28,7 @@ type Turn struct {
 	Model          catalog.Model
 	Prompt         []provider.Message
 	RequestID      string
+	Prior          *priorMessage
 }
 
 type Event struct {

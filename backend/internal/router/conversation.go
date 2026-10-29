@@ -10,6 +10,7 @@ const (
 	routeConversations        = "/conversations"
 	routeConversation         = "/conversations/:" + controller.ParamConversationID
 	routeConversationMessages = routeConversation + "/messages"
+	routeConversationContinue = routeConversation + "/continue"
 )
 
 func registerConversation(group *gin.RouterGroup, c *controller.Conversation) {
