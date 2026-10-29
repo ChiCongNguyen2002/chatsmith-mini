@@ -1,20 +1,38 @@
 # Working Rules
 
-## Structure (Anfin)
-Layout: `backend/` (Go), `frontend/` (static HTML, CSS, JS served at `/`), `deploy/` (compose), `docs/`, `tests/`. Inside `backend/`: `cmd/app/main.go` (func body <=15 lines) | `configs/{config,default,load}.go` + yaml | `constants/` | `internal/app/{app,infra,module}.go` (manual DI) | `internal/<domain>/{module,repo,service,model,dto,constants}.go` | `internal/controller/<domain>.go` | `internal/router/<domain>.go` | `internal/middleware` | `internal/server` | `pkg/{failure,response,logger,databases,uid}`
+## Structure (Anfin style, versioned routes)
+Layout: `backend/` (Go), `frontend/` (static HTML, CSS, JS served at `/`), `deploy/`, `docs/`, `tests/`. Inside `backend/`:
+- `cmd/app/main.go`: load config and call `app.Run` (body <= 15 lines).
+- `configs/`: `config.go`, `default.go`, `load.go`, `secrets.go` + yaml.
+- `constants/`: values shared by several domains (provider, header, context key, log key, route paths).
+- `migrations/`: SQL files, applied in order.
+- `pkg/`: utilities and external clients. Must not import `internal/`. Packages: `failure`, `response`, `logger`, `databases`, `uid`, `pagination`, `reqctx`, `sse`, `prompt`, `llm`, `oauth`, `sessionstate`.
+- `internal/app/`: `app.go` (Run), `oauth.go` (build providers from config). Manual DI only.
+- `internal/server/`: start and graceful shutdown.
+- `internal/domain/<context>/`: business logic. Contexts: `auth`, `catalog`, `chat`, `conversation`, `user`. Files: `model.go`, `dto.go`, `constants.go`, `module.go`, `repo.go`, `service.go` (a context may omit `dto.go` when it has no API types).
+- `internal/controller/`: `controller.go` (respondErr) and one file per context with gin handlers. A new version is a new file: `chat_v2.go`.
+- `internal/router/`: `engine.go` (mounts `/v1`, and `/v2` when it exists) and one file per context with its routes. A new version is a new file: `chat_v2.go`. Deprecated route files move to `router/old_router/`.
+- `internal/middleware/`: request_id, access_log, recovery, timeout, session.
 
-## Domain
-1. `NewModule(dto *CreateModuleDTO) *Module`; `newRepo`/`newService` unexported; return structs.
-2. Interface only with 2+ implementations, defined at the consumer, 1-3 methods; one method is named `<Method>er`.
-3. Repo uses GORM and `WithTx` for transactions. Raw SQL only where GORM cannot express it (LATERAL, FILTER), as a named const.
+## Domain (one way to write a domain)
+1. Each domain folder holds these files with these names. No suffix files except version files (`dto_v2.go`).
+2. `model.go`: structs with gorm tags.
+3. `dto.go`: request and response structs with `json` tags, plus mapper functions (`ToResponse`) that build responses from models. This is the contract with clients. A new API version gets `dto_v2.go`.
+4. `constants.go`: values used only inside the domain.
+5. `module.go`: `NewModule(...)` builds the repo and service and returns `Module{Service}`.
+6. `repo.go`: a concrete `Repo` struct using gorm. No interface.
+7. `service.go`: business logic. It calls `repo` directly and returns `failure.Code` errors.
+8. A domain must not import `gin`, `net/http`, `controller`, `router` or `middleware`.
+9. Interfaces only where two or more implementations exist: `pkg/llm.Streamer` and `pkg/oauth.Provider`.
+10. A service file over 450 lines is reviewed before it grows further.
 
 ## Clean
-1. No hard string or number. Header, context key, event, provider, status, error code, table name are const or enum type. Numbers live in config. Adding a provider, model, error code, route or plan is one registry line.
-2. No dead code, no comments. File <=200 lines, func <=40 lines. Same logic twice goes to one place. Write nothing unused yet.
+1. No hard string or number in business code. Shared values go to `constants/`, domain values to `constants.go`. Numbers that tune behavior live in config.
+2. No dead code. Comments only as one doc line per package (`// Package x ...`). Lint uses `.golangci.yml` from Anfin (funlen 100, gocyclo 15, lll 120).
 3. Names say what the thing does; one function does one job.
 
 ## Errors and logs
-1. Error codes are enum values in `pkg/failure`. Wrap with `failure.ErrWithTrace` only where the error is born or crosses an outside boundary (repo/DB, provider/HTTP, config); upper layers return it unchanged. Handlers answer through one helper in `pkg/response`.
+1. Error codes are enum values in `pkg/failure`. Wrap with `failure.ErrWithTrace` only where the error is born or crosses an outside boundary (repo/DB, provider/OAuth/HTTP, config); upper layers return it unchanged. Never call `ErrWithTrace(nil)`. Handlers answer through one helper in `pkg/response`.
 2. Never log and return the same error. Never ignore an error without a reason.
 3. `log/slog` with structured fields; every request-scoped line carries `request_id` from the context.
 

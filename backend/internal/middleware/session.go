@@ -1,15 +1,21 @@
 package middleware
 
 import (
+	"context"
+
 	"chatsmith-mini/constants"
-	"chatsmith-mini/internal/auth"
+	"chatsmith-mini/internal/domain/auth"
 	"chatsmith-mini/pkg/failure"
 	"chatsmith-mini/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Session(sessions *auth.Service) gin.HandlerFunc {
+type SessionVerifier interface {
+	VerifySession(ctx context.Context, token string) (string, error)
+}
+
+func Session(sessions SessionVerifier) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		token, err := ctx.Cookie(auth.CookieSession)
 		if err != nil {
@@ -18,7 +24,7 @@ func Session(sessions *auth.Service) gin.HandlerFunc {
 			return
 		}
 
-		userID, err := sessions.VerifySession(token)
+		userID, err := sessions.VerifySession(ctx.Request.Context(), token)
 		if err != nil {
 			response.Err(ctx, failure.CodeUnauthorized)
 			ctx.Abort()
@@ -28,8 +34,4 @@ func Session(sessions *auth.Service) gin.HandlerFunc {
 		ctx.Set(string(constants.ContextKeyUserID), userID)
 		ctx.Next()
 	}
-}
-
-func GetUserID(ctx *gin.Context) string {
-	return ctx.GetString(string(constants.ContextKeyUserID))
 }
