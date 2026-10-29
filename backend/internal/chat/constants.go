@@ -59,7 +59,7 @@ WHERE id = ?`
 
 	finishMessageSQL = `UPDATE messages
 SET content = ?, status = ?, input_tokens = ?, output_tokens = ?, cost_micro_usd = ?,
-    usage_estimated = ?, first_token_ms = ?, latency_ms = ?
+    usage_estimated = ?, first_token_ms = ?, latency_ms = ?, sources = COALESCE(?, sources)
 WHERE id = ?`
 
 	touchOnlySQL    = `UPDATE conversations SET updated_at = now() WHERE id = ?`

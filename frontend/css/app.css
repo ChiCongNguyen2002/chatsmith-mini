@@ -231,8 +231,7 @@ body {
   line-height: 1.65;
   box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
-.msg.user .bubble { white-space: pre-wrap; }
-.msg.user .bubble { background: var(--accent-soft); border-bottom-right-radius: 6px; }
+.msg.user .bubble { background: var(--accent-soft); border-bottom-right-radius: 6px; white-space: pre-wrap; }
 .msg.assistant .bubble { border-bottom-left-radius: 6px; background: var(--surface); }
 .msg.failed .bubble, .msg.canceled .bubble, .msg.truncated .bubble { border: 1px dashed var(--danger); }
 .notice { color: var(--danger); font-size: 12px; padding-left: 4px; }
@@ -389,7 +388,6 @@ body {
 .search-icon { font-size: 15px; flex-shrink: 0; }
 .search-toggle { color: var(--muted); font-size: 12px; }
 .search-sources { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-.search-sources.hidden { display: none; }
 .search-link {
   display: block; color: var(--accent); font-size: 12px;
   text-decoration: none; white-space: nowrap;
