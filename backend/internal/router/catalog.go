@@ -8,6 +8,6 @@ import (
 
 const routeModels = "/models"
 
-func registerCatalog(group *gin.RouterGroup, c *controller.Catalog) {
-	group.GET(routeModels, c.Models)
+func registerCatalog(group *gin.RouterGroup, h *controller.Catalog) {
+	group.GET(routeModels, h.Models)
 }

@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"chatsmith-mini/internal/catalog"
+	"chatsmith-mini/internal/domain/catalog"
 	"chatsmith-mini/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -18,9 +18,9 @@ func NewCatalog(service *catalog.Service) *Catalog {
 func (c *Catalog) Models(ctx *gin.Context) {
 	result, err := c.service.List(ctx.Request.Context())
 	if err != nil {
-		respondError(ctx, err)
+		respondErr(ctx, err)
 		return
 	}
 
-	response.Success(ctx, result)
+	response.Success(ctx, catalog.ToResponse(*result))
 }

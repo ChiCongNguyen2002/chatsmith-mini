@@ -9,12 +9,30 @@ import (
 )
 
 type Body struct {
-	Status int `json:"status"`
-	Data   any `json:"data"`
+	Status int   `json:"status"`
+	Data   any   `json:"data"`
+	Meta   *Meta `json:"meta,omitempty"`
+}
+
+type Meta struct {
+	HasMore bool `json:"has_more"`
+}
+
+type Page struct {
+	Items      any     `json:"items"`
+	NextCursor *string `json:"next_cursor"`
 }
 
 func Success(ctx *gin.Context, data any) {
 	ctx.JSON(http.StatusOK, Body{Status: http.StatusOK, Data: data})
+}
+
+func Paged(ctx *gin.Context, items any, nextCursor *string) {
+	ctx.JSON(http.StatusOK, Body{
+		Status: http.StatusOK,
+		Data:   Page{Items: items, NextCursor: nextCursor},
+		Meta:   &Meta{HasMore: nextCursor != nil},
+	})
 }
 
 func Created(ctx *gin.Context, data any) {
