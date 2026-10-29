@@ -57,7 +57,12 @@
     return true;
   }
   function onDelta(ui, d) {
-    ui.bubble.textContent += d.text;
+    ui.mdBuf += d.text;
+    if (!ui.mdContent) {
+      ui.mdContent = App.el("div", "md-content");
+      ui.bubble.append(ui.mdContent);
+    }
+    App.renderMd(ui.mdContent, ui.mdBuf);
     $("view").scrollTop = $("view").scrollHeight;
   }
   function onCompleted(ui, d) {
@@ -95,8 +100,7 @@
       if (name === "search.started") {
         searchBlock = App.el("div", "search-block searching");
         searchBlock.innerHTML = '<span class="search-icon">&#128269;</span><span>Searching the web…</span>';
-        ui.bubble.textContent = "";
-        ui.bubble.append(searchBlock);
+        ui.bubble.replaceChildren(searchBlock);
       } else if (name === "search.source") {
         sources.push(d);
       } else if (name === "search.completed") {

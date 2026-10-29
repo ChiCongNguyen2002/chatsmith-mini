@@ -6,6 +6,11 @@ var App = (window.App = {});
   var TRUNCATED_NOTICE = "Câu trả lời bị cắt vì giới hạn độ dài";
   var $ = function (id) { return document.getElementById(id); };
 
+  marked.setOptions({ breaks: true, gfm: true });
+  function renderMd(bubble, text) {
+    bubble.innerHTML = marked.parse(text);
+  }
+
   function el(tag, cls, text) {
     var node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -199,9 +204,14 @@ var App = (window.App = {});
   }
   function addMessage(col, m) {
     var row = el("div", "msg " + m.role);
-    var bubble = el("div", "bubble", m.content);
+    var bubble = el("div", "bubble");
+    if (m.role === "assistant" && m.content) {
+      renderMd(bubble, m.content);
+    } else {
+      bubble.textContent = m.content || "";
+    }
     var chip = el("div", "chip", chipText(m));
-    var ui = { row: row, bubble: bubble, chip: chip, notice: null };
+    var ui = { row: row, bubble: bubble, chip: chip, notice: null, mdBuf: "" };
     row.append(bubble, chip);
     col.append(row);
     markStatus(ui, m.status);
@@ -256,6 +266,7 @@ var App = (window.App = {});
   App.showError = showError;
   App.api = api;
   App.usd = usd;
+  App.renderMd = renderMd;
   App.chipText = chipText;
   App.markStatus = markStatus;
   App.addMessage = addMessage;
