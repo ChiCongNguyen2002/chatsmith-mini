@@ -32,7 +32,7 @@ type Message struct {
 	UsageEstimated *bool           `gorm:"column:usage_estimated" json:"usage_estimated"`
 	FirstTokenMS   *int            `gorm:"column:first_token_ms" json:"first_token_ms"`
 	LatencyMS      *int            `gorm:"column:latency_ms" json:"latency_ms"`
-	Sources        json.RawMessage `gorm:"column:sources" json:"sources"`
+	Sources        json.RawMessage `gorm:"column:sources;->" json:"sources"`
 }
 
 func (Message) TableName() string {
