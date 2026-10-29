@@ -45,9 +45,8 @@
   }
 
   $("newChat").addEventListener("click", function () {
-    if (state.busy) return;
     history.pushState({}, "", "/" + location.search);
-    state.active = null;
+    App.clearActive();
     App.renderHello();
     App.renderList();
     closeSidebar();
@@ -76,7 +75,7 @@
     }
   });
   $("send").addEventListener("click", App.send);
-  $("stop").addEventListener("click", function () { if (state.abort) state.abort.abort(); });
+  $("stop").addEventListener("click", App.stopStream);
   $("input").addEventListener("keydown", function (e) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); App.send(); }
   });

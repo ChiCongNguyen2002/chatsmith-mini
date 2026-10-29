@@ -2,8 +2,8 @@
   var $ = App.$;
   var state = App.state;
 
-  function setBusy(on) {
-    state.busy = on;
+  function refreshComposer() {
+    var on = Boolean(state.active && state.streams[state.active]);
     $("send").hidden = on;
     $("stop").hidden = !on;
     $("input").disabled = on;
@@ -51,6 +51,7 @@
     if (state.active) return true;
     var c = await App.api("POST", "/v1/conversations", {});
     if (!c) return false;
+    state.wanted = c.id;
     state.active = c.id;
     history.pushState({}, "", "/conversation/" + c.id + location.search);
     App.renderConversation(c, []);
@@ -68,6 +69,7 @@
   function onCompleted(ui, d) {
     ui.chip.textContent = d.model + (d.status !== "completed" ? " · " + d.status : "") + " · " + App.usd(d.cost_micro_usd) + " · TTFT " + d.first_token_ms + " ms · " + d.latency_ms + " ms";
     App.markStatus(ui, d.status);
+    if (!ui.row.isConnected) return;
     if (d.status === "truncated") App.showContinue(ui, state.active);
     else App.removeContinue();
   }
@@ -75,14 +77,14 @@
     App.markStatus(ui, "failed");
     ui.chip.textContent = ui.chip.textContent + " " + d.code + " · request_id " + d.request_id;
   }
-  async function streamReply(url, body, ui, convId) {
+  async function streamReply(url, body, ui, convId, signal) {
     var started = performance.now();
     var first = 0;
     var res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: state.abort.signal
+      signal: signal
     });
     var rid = res.headers.get("X-Request-Id") || "";
     if (!res.ok) {
@@ -108,23 +110,7 @@
         sources.push(d);
       } else if (name === "search.completed") {
         if (searchBlock) {
-          searchBlock.className = "search-block done";
-          var label = App.el("span", "", "Searched " + sources.length + " sources");
-          var toggle = App.el("span", "search-toggle", " ▸");
-          var list = App.el("div", "search-sources hidden");
-          sources.forEach(function (s) {
-            var a = App.el("a", "search-link", s.title || s.url);
-            a.href = s.url;
-            a.target = "_blank";
-            a.rel = "noopener";
-            list.append(a);
-          });
-          searchBlock.replaceChildren(App.el("span", "search-icon", "✓"));
-          searchBlock.append(label, toggle, list);
-          searchBlock.addEventListener("click", function () {
-            var hidden = list.classList.toggle("hidden");
-            toggle.textContent = hidden ? " ▸" : " ▾";
-          });
+          ui.bubble.replaceChildren(App.searchSummary(sources));
           sources = [];
         }
       } else if (name === "message.delta") {
@@ -144,7 +130,7 @@
   }
   async function send() {
     var text = $("input").value.trim();
-    if (!text || state.busy || !state.model) return;
+    if (!text || !state.model || state.wanted !== state.active || state.streams[state.active]) return;
     if (!(await ensureConversation())) return;
     var convId = state.active;
     var col = $("view").querySelector(".col");
@@ -159,7 +145,7 @@
     await runStream("/v1/conversations/" + convId + "/messages", { content: text, model: state.model }, ui, convId);
   }
   async function continueTurn(convId, ui) {
-    if (state.busy) return;
+    if (state.streams[convId]) return;
     App.removeContinue();
     ui.continuing = true;
     ui.mdContent = App.el("div", "md-content");
@@ -169,21 +155,24 @@
     await runStream("/v1/conversations/" + convId + "/continue", {}, ui, convId);
   }
   async function runStream(url, body, ui, convId) {
-    state.abort = new AbortController();
-    setBusy(true);
+    var ctrl = new AbortController();
+    state.streams[convId] = ctrl;
+    refreshComposer();
     try {
-      await streamReply(url, body, ui, convId);
+      await streamReply(url, body, ui, convId, ctrl.signal);
     } catch (e) {
       if (e.name !== "AbortError") App.showError({ status: 0, data: "mất kết nối khi stream (" + e.name + ")", rid: "" });
     } finally {
-      state.abort = null;
-      setBusy(false);
+      delete state.streams[convId];
+      state.views.delete(convId);
+      refreshComposer();
       await App.loadList(false);
       await refreshHeader(convId);
     }
   }
 
-  App.setBusy = setBusy;
+  App.refreshComposer = refreshComposer;
   App.send = send;
   App.continueTurn = continueTurn;
+  App.stopStream = function () { var c = state.streams[state.active]; if (c) c.abort(); };
 })(App);

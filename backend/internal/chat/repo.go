@@ -31,6 +31,7 @@ type finishInput struct {
 	costMicroUSD   int64
 	firstTokenMS   *int
 	latencyMS      int
+	sources        []searchSourceData
 }
 
 func (r *Repo) Begin(ctx context.Context, conversationID, content, title, model string, staleBefore time.Time) (conversation.Message, conversation.Message, error) {
@@ -134,9 +135,13 @@ func (r *Repo) History(ctx context.Context, conversationID string, beforeSeq int
 }
 
 func (r *Repo) Finish(ctx context.Context, in finishInput) error {
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	sources, err := marshalSources(in.sources)
+	if err != nil {
+		return failure.ErrWithTrace(err)
+	}
+	err = r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Exec(finishMessageSQL, in.content, in.status, in.usage.InputTokens, in.usage.OutputTokens, in.costMicroUSD,
-			in.usage.Estimated, in.firstTokenMS, in.latencyMS, in.messageID).Error
+			in.usage.Estimated, in.firstTokenMS, in.latencyMS, sources, in.messageID).Error
 		if err != nil {
 			return err
 		}

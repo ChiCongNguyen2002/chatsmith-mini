@@ -94,6 +94,7 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 		firstTokenMS int
 		result       provider.Result
 		streamErr    error
+		found        sourceLog
 	)
 	if emitErr == nil {
 		webSearch := turn.Prior == nil && s.cfg.WebSearch && s.classifier.NeedsSearch(genCtx, turn.UserMessage.Content)
@@ -104,15 +105,7 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 			SystemPrompt:     s.cfg.SystemPrompt,
 			WebSearchEnabled: webSearch,
 			OnSearch: func(se provider.SearchEvent) error {
-				switch se.Type {
-				case "started":
-					return emit(Event{Name: EventSearchStarted})
-				case "source":
-					return emit(Event{Name: EventSearchSource, Data: searchSourceData{URL: se.URL, Title: se.Title}})
-				case "completed":
-					return emit(Event{Name: EventSearchCompleted})
-				}
-				return nil
+				return found.handle(emit, se)
 			},
 		}, func(text string) error {
 			if firstTokenMS == 0 {
@@ -145,6 +138,7 @@ func (s *Service) Run(ctx context.Context, turn *Turn, emit func(Event) error) {
 		conversationID: turn.ConversationID,
 		messageID:      turn.Assistant.ID,
 		content:        saved,
+		sources:        found,
 		status:         status,
 		usage:          usage,
 		costMicroUSD:   costMicro,

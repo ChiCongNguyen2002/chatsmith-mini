@@ -3,6 +3,7 @@ var App = (window.App = {});
 (function (App) {
   var PAGE = 20;
   var MSG_PAGE = 200;
+  var VIEW_LIMIT = 10;
   var TRUNCATED_NOTICE = "Câu trả lời bị cắt vì giới hạn độ dài";
   var $ = function (id) { return document.getElementById(id); };
 
@@ -131,8 +132,9 @@ var App = (window.App = {});
     var res = await api("DELETE", "/v1/conversations/" + id);
     if (!res) return;
     App.state.items = App.state.items.filter(function (c) { return c.id !== id; });
-    if (App.state.active === id) {
-      App.state.active = null;
+    App.state.views.delete(id);
+    if (App.state.wanted === id) {
+      clearActive();
       history.pushState({}, "", "/" + location.search);
       renderHello();
     }
@@ -210,11 +212,29 @@ var App = (window.App = {});
     $("view").querySelectorAll(".continue-btn").forEach(function (b) { b.remove(); });
   }
   function showContinue(ui, convId) {
-    removeContinue();
+    ui.row.parentNode.querySelectorAll(".continue-btn").forEach(function (b) { b.remove(); });
     var btn = el("button", "btn small continue-btn", "Tiếp tục");
     btn.type = "button";
     btn.addEventListener("click", function () { App.continueTurn(convId, ui); });
     ui.row.insertBefore(btn, ui.chip);
+  }
+  function searchSummary(sources) {
+    var block = el("div", "search-block done");
+    var list = el("div", "search-sources");
+    list.hidden = true;
+    var toggle = el("span", "search-toggle", " ▸");
+    sources.forEach(function (s) {
+      var a = el("a", "search-link", s.title || s.url);
+      if (/^https?:\/\//.test(s.url)) { a.href = s.url; a.target = "_blank"; a.rel = "noopener"; }
+      a.addEventListener("click", function (e) { e.stopPropagation(); });
+      list.append(a);
+    });
+    block.append(el("span", "search-icon", "✓"), el("span", "", "Searched " + sources.length + " sources"), toggle, list);
+    block.addEventListener("click", function () {
+      list.hidden = !list.hidden;
+      toggle.textContent = list.hidden ? " ▸" : " ▾";
+    });
+    return block;
   }
   function addMessage(col, m) {
     var row = el("div", "msg " + m.role);
@@ -224,6 +244,7 @@ var App = (window.App = {});
     } else {
       bubble.textContent = m.content || "";
     }
+    if (m.sources && m.sources.length) bubble.prepend(searchSummary(m.sources));
     var chip = el("div", "chip", chipText(m));
     var ui = { row: row, bubble: bubble, chip: chip, notice: null, mdBuf: m.content || "", mdContent: null, model: m.model };
     row.append(bubble, chip);
@@ -231,20 +252,35 @@ var App = (window.App = {});
     markStatus(ui, m.status);
     return ui;
   }
-  function renderConversation(c, msgs) {
-    var view = $("view");
-    view.replaceChildren();
+  function buildEntry(c, msgs) {
     var col = el("div", "col");
     col.append(el("h2", "title", c.title || "Untitled"), el("div", "meta", "Cập nhật " + new Date(c.updated_at).toLocaleString() + " · " + msgs.length + " tin"));
     if (msgs.length === 0) col.append(el("p", "empty", "Cuộc trò chuyện chưa có tin nhắn."));
     var last = null;
     msgs.forEach(function (m) { last = addMessage(col, m); });
     if (last && msgs[msgs.length - 1].status === "truncated") showContinue(last, c.id);
-    view.append(col);
+    return { c: c, msgs: msgs, col: col };
+  }
+  function showEntry(entry) {
+    var view = $("view");
+    view.replaceChildren(entry.col);
     view.scrollTop = view.scrollHeight;
   }
+  function remember(entry) {
+    var views = App.state.views;
+    views.delete(entry.c.id);
+    views.set(entry.c.id, entry);
+    if (views.size <= VIEW_LIMIT) return;
+    var evict = Array.from(views.keys()).find(function (key) { return !App.state.streams[key] && key !== App.state.active; });
+    if (evict) views.delete(evict);
+  }
+  function renderConversation(c, msgs) {
+    var entry = buildEntry(c, msgs);
+    remember(entry);
+    showEntry(entry);
+  }
   function closeConversation() {
-    App.state.active = null;
+    clearActive();
     renderHello();
     renderList();
   }
@@ -259,22 +295,55 @@ var App = (window.App = {});
       after = batch[batch.length - 1].seq;
     }
   }
-  async function openConversation(id, push) {
-    if (App.state.busy) return;
+  function showLoading() {
+    var col = el("div", "col");
+    col.append(el("p", "empty", "Đang tải cuộc trò chuyện…"));
+    $("view").replaceChildren(col);
+  }
+  async function fetchConversation(id) {
     var c = await api("GET", "/v1/conversations/" + id);
-    var msgs = c && (await loadMessages(id));
-    if (!msgs) { closeConversation(); return; }
-    App.state.active = id;
+    if (!c) return null;
+    var msgs = await loadMessages(id);
+    return msgs ? { c: c, msgs: msgs } : null;
+  }
+  function sameData(a, b) {
+    return a.c.title === b.c.title && JSON.stringify(a.msgs) === JSON.stringify(b.msgs);
+  }
+  async function openConversation(id, push) {
+    App.state.wanted = id;
     if (push) history.pushState({}, "", "/conversation/" + id + location.search);
-    renderConversation(c, msgs);
+    var cached = App.state.views.get(id);
+    App.state.active = cached ? id : null;
+    if (cached) {
+      showEntry(cached);
+      remember(cached);
+    } else {
+      showLoading();
+    }
     renderList();
+    App.refreshComposer();
+    var fresh = await fetchConversation(id);
+    if (App.state.wanted !== id) return;
+    if (!fresh) { if (!cached) closeConversation(); return; }
+    App.state.active = id;
+    var keep = cached && (App.state.streams[id] || sameData(cached, fresh));
+    if (!keep) renderConversation(fresh.c, fresh.msgs);
+    renderList();
+    App.refreshComposer();
+  }
+  function clearActive() {
+    App.state.wanted = null;
+    App.state.active = null;
+    App.refreshComposer();
   }
   function routeFromPath() {
     var m = location.pathname.match(/^\/conversation\/([0-9a-f-]{36})$/);
-    if (m) openConversation(m[1], false); else { App.state.active = null; renderHello(); renderList(); }
+    if (m) openConversation(m[1], false); else { clearActive(); renderHello(); renderList(); }
   }
 
-  App.state = { items: [], next: null, active: null, catalog: null, model: "", tab: "", busy: false, abort: null };
+  App.state = { items: [], next: null, active: null, wanted: null, views: new Map(), streams: {}, catalog: null, model: "", tab: "" };
+  App.clearActive = clearActive;
+  App.searchSummary = searchSummary;
   App.$ = $;
   App.el = el;
   App.showLogin = showLogin;
