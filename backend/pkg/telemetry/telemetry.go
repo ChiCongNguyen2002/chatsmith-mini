@@ -8,8 +8,12 @@ import (
 
 	mexporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+const serviceName = "chatsmith-mini"
 
 func Setup(_ context.Context, projectID string) (func(context.Context) error, error) {
 	if projectID == "" {
@@ -20,7 +24,14 @@ func Setup(_ context.Context, projectID string) (func(context.Context) error, er
 	if err != nil {
 		return nil, failure.ErrWithTrace(err)
 	}
-	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)))
+	res, err := resource.Merge(resource.Default(), resource.NewSchemaless(attribute.String("service.name", serviceName)))
+	if err != nil {
+		return nil, failure.ErrWithTrace(err)
+	}
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(res),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)),
+	)
 	otel.SetMeterProvider(provider)
 
 	return provider.Shutdown, nil
