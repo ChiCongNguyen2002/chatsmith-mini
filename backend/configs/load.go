@@ -27,6 +27,7 @@ var explicitEnv = map[string]string{
 	KeyAuthGoogleClientSecret: "AUTH_GOOGLE_CLIENT_SECRET",
 	KeyAuthPublicBaseURL:      "AUTH_PUBLIC_BASE_URL",
 	KeyAuthSessionSecret:      "AUTH_SESSION_SECRET",
+	KeyTelemetryProjectID:     "GCP_PROJECT_ID",
 }
 
 func Load(ctx context.Context) (*Config, error) {

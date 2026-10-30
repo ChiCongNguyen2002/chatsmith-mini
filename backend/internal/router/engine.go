@@ -21,9 +21,14 @@ type Handlers struct {
 	Chat         *controller.Chat
 }
 
-func NewEngine(log *slog.Logger, requestTimeout time.Duration, session gin.HandlerFunc, h Handlers) *gin.Engine {
+func NewEngine(log *slog.Logger, requestTimeout time.Duration, session gin.HandlerFunc, h Handlers) (*gin.Engine, error) {
+	httpMetrics, err := middleware.Metrics()
+	if err != nil {
+		return nil, err
+	}
+
 	engine := gin.New()
-	engine.Use(middleware.RequestID(log), middleware.AccessLog(), middleware.Recovery())
+	engine.Use(middleware.RequestID(log), middleware.AccessLog(), httpMetrics, middleware.Recovery())
 
 	registerWeb(engine, h.Web)
 	registerHealth(engine, h.Health)
@@ -38,5 +43,5 @@ func NewEngine(log *slog.Logger, requestTimeout time.Duration, session gin.Handl
 	registerChatMessages(timed, h.Chat)
 	registerCatalog(timed, h.Catalog)
 
-	return engine
+	return engine, nil
 }

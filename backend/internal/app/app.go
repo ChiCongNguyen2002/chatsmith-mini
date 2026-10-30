@@ -20,13 +20,26 @@ import (
 	"chatsmith-mini/pkg/databases"
 	"chatsmith-mini/pkg/llm"
 	"chatsmith-mini/pkg/logger"
+	"chatsmith-mini/pkg/telemetry"
 )
+
+const logTelemetryShutdown = "telemetry_shutdown"
 
 func Run(cfg *configs.Config) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	log := logger.New()
+
+	shutdownMetrics, err := telemetry.Setup(ctx, cfg.Telemetry.ProjectID)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := shutdownMetrics(context.Background()); err != nil {
+			log.Error(logTelemetryShutdown, constants.LogKeyError, err)
+		}
+	}()
 
 	db, err := databases.NewPostgres(cfg.Database)
 	if err != nil {
@@ -44,9 +57,12 @@ func Run(cfg *configs.Config) error {
 	if err := catalogs.Service.CheckDefault(ctx); err != nil {
 		return err
 	}
-	chats := chat.NewModule(db, conversations.Service, catalogs.Service, streamers, llm.NewClassifier(cfg.Provider, cfg.Chat, httpClient), cfg.Chat)
+	chats, err := chat.NewModule(db, conversations.Service, catalogs.Service, streamers, llm.NewClassifier(cfg.Provider, cfg.Chat, httpClient), cfg.Chat)
+	if err != nil {
+		return err
+	}
 
-	engine := router.NewEngine(log, cfg.Server.RequestTimeout, middleware.Session(authModule.Service), router.Handlers{
+	engine, err := router.NewEngine(log, cfg.Server.RequestTimeout, middleware.Session(authModule.Service), router.Handlers{
 		Web:          controller.NewWeb(cfg.Server.FrontendDir),
 		Health:       controller.NewHealth(db),
 		Auth:         controller.NewAuth(authModule.Service, cfg.Auth),
@@ -54,6 +70,9 @@ func Run(cfg *configs.Config) error {
 		Conversation: controller.NewConversation(conversations.Service),
 		Chat:         controller.NewChat(chats.Service, cfg.Chat.MaxBodyBytes),
 	})
+	if err != nil {
+		return err
+	}
 
 	return server.New(cfg.Server, log, engine).Start(ctx)
 }

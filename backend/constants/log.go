@@ -10,4 +10,6 @@ const (
 	LogKeyStack     = "stack"
 	LogKeyPort      = "port"
 	LogKeyError     = "error"
+	LogKeySeverity  = "severity"
+	LogKeyErrorCode = "error_code"
 )

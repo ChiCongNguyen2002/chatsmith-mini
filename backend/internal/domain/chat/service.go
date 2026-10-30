@@ -31,6 +31,7 @@ type Service struct {
 	streamers     map[constants.Provider]Streamer
 	classifier    *llm.Classifier
 	cfg           configs.ChatConfig
+	metrics       *chatMetrics
 }
 
 type reply struct {
@@ -51,40 +52,45 @@ type outcome struct {
 	latencyMS int
 }
 
-func newService(repo *Repo, conversations *conversation.Service, models *catalog.Service, streamers map[constants.Provider]Streamer, classifier *llm.Classifier, cfg configs.ChatConfig) *Service {
-	return &Service{repo: repo, conversations: conversations, models: models, streamers: streamers, classifier: classifier, cfg: cfg}
+func newService(repo *Repo, conversations *conversation.Service, models *catalog.Service, streamers map[constants.Provider]Streamer, classifier *llm.Classifier, cfg configs.ChatConfig) (*Service, error) {
+	metrics, err := newChatMetrics()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Service{repo: repo, conversations: conversations, models: models, streamers: streamers, classifier: classifier, cfg: cfg, metrics: metrics}, nil
 }
 
 func (s *Service) Start(ctx context.Context, in StartInput) (*Turn, error) {
 	content := strings.TrimSpace(in.Content)
 	if content == "" || utf8.RuneCountInString(content) > s.cfg.MaxMessageChars {
-		return nil, failure.New(failure.CodeBadRequest)
+		return nil, s.reject(ctx, modelUnknown, failure.New(failure.CodeBadRequest))
 	}
 
 	model, err := s.models.Resolve(ctx, in.Model)
 	if err != nil {
-		return nil, err
+		return nil, s.reject(ctx, modelUnknown, err)
 	}
 	if _, ok := s.streamers[model.Provider]; !ok {
-		return nil, failure.New(failure.CodeModelUnavailable)
+		return nil, s.reject(ctx, model.ID, failure.New(failure.CodeModelUnavailable))
 	}
 	if _, err := s.conversations.Get(ctx, in.UserID, in.ConversationID); err != nil {
-		return nil, err
+		return nil, s.reject(ctx, model.ID, err)
 	}
 	if err := s.checkBudget(ctx); err != nil {
-		return nil, err
+		return nil, s.reject(ctx, model.ID, err)
 	}
 
 	staleBefore := time.Now().Add(-(s.cfg.Timeout + staleAfterMargin))
 	user, assistant, err := s.repo.BeginTurn(ctx, in.ConversationID, content, prompt.Title(content), model.ID, staleBefore)
 	if err != nil {
-		return nil, err
+		return nil, s.reject(ctx, model.ID, err)
 	}
 
 	history, err := s.repo.History(ctx, in.ConversationID, assistant.Seq)
 	if err != nil {
 		s.abandon(ctx, in.ConversationID, assistant.ID)
-		return nil, err
+		return nil, s.reject(ctx, model.ID, err)
 	}
 
 	return &Turn{
@@ -99,21 +105,21 @@ func (s *Service) Start(ctx context.Context, in StartInput) (*Turn, error) {
 
 func (s *Service) Continue(ctx context.Context, in ContinueInput) (*Turn, error) {
 	if _, err := s.conversations.Get(ctx, in.UserID, in.ConversationID); err != nil {
-		return nil, err
+		return nil, s.reject(ctx, modelUnknown, err)
 	}
 	if err := s.checkBudget(ctx); err != nil {
-		return nil, err
+		return nil, s.reject(ctx, modelUnknown, err)
 	}
 
 	last, model, err := s.truncatedTail(ctx, in.ConversationID)
 	if err != nil {
-		return nil, err
+		return nil, s.reject(ctx, modelUnknown, err)
 	}
 
 	staleBefore := time.Now().Add(-(s.cfg.Timeout + staleAfterMargin))
 	assistant, err := s.repo.BeginContinue(ctx, last, staleBefore)
 	if err != nil {
-		return nil, err
+		return nil, s.reject(ctx, model.ID, err)
 	}
 
 	history, err := s.repo.History(ctx, in.ConversationID, last.Seq)
@@ -245,13 +251,16 @@ func (s *Service) report(ctx context.Context, turn *Turn, emit Emit, out reply, 
 	if out.streamErr != nil && res.status == StatusFailed {
 		log.Error(logChatFailed, constants.LogKeyError, out.streamErr, logKeyModel, turn.Model.ID, logKeyConvID, turn.ConversationID)
 	}
+	latency := time.Duration(res.latencyMS) * time.Millisecond
 	if saveErr != nil {
 		log.Error(logChatNotSaved, constants.LogKeyError, saveErr, logKeyConvID, turn.ConversationID)
+		s.metrics.record(ctx, turn.Model.ID, StatusFailed, failure.CodeInternal, latency)
 		_ = emit(EventFailed, newFailedEvent(turn, failure.CodeInternal))
 
 		return
 	}
 	logFinished(log, turn, res, out.firstTokenMS)
+	s.metrics.record(ctx, turn.Model.ID, res.status, res.reason, latency)
 
 	switch res.status {
 	case StatusCompleted, StatusTruncated:
@@ -259,6 +268,12 @@ func (s *Service) report(ctx context.Context, turn *Turn, emit Emit, out reply, 
 	case StatusFailed:
 		_ = emit(EventFailed, newFailedEvent(turn, res.reason))
 	}
+}
+
+func (s *Service) reject(ctx context.Context, model string, err error) error {
+	s.metrics.reject(ctx, model, failure.CodeOf(err))
+
+	return err
 }
 
 func (s *Service) checkBudget(ctx context.Context) error {

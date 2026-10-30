@@ -13,6 +13,11 @@ type Module struct {
 	Service *Service
 }
 
-func NewModule(db databases.PostgresDB, conversations *conversation.Service, models *catalog.Service, streamers map[constants.Provider]Streamer, classifier *llm.Classifier, cfg configs.ChatConfig) *Module {
-	return &Module{Service: newService(newRepo(db), conversations, models, streamers, classifier, cfg)}
+func NewModule(db databases.PostgresDB, conversations *conversation.Service, models *catalog.Service, streamers map[constants.Provider]Streamer, classifier *llm.Classifier, cfg configs.ChatConfig) (*Module, error) {
+	service, err := newService(newRepo(db), conversations, models, streamers, classifier, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Module{Service: service}, nil
 }

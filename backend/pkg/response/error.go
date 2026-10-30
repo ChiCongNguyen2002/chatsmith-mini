@@ -8,12 +8,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const logRequestFailed = "request_failed"
+const (
+	logRequestFailed   = "request_failed"
+	logRequestRejected = "request_rejected"
+)
 
 func ErrFrom(ctx *gin.Context, err error) {
 	code := failure.CodeOf(err)
+	log := logger.FromContext(ctx.Request.Context())
 	if code == failure.CodeInternal {
-		logger.FromContext(ctx.Request.Context()).Error(logRequestFailed, constants.LogKeyError, err)
+		log.Error(logRequestFailed, constants.LogKeyErrorCode, code, constants.LogKeyError, err)
+	} else {
+		log.Warn(logRequestRejected, constants.LogKeyErrorCode, code)
 	}
 
 	Err(ctx, code)

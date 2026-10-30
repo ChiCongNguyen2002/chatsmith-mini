@@ -15,11 +15,16 @@ const (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"SERVER"`
-	Database DatabaseConfig `mapstructure:"DATABASE"`
-	Provider ProviderConfig `mapstructure:"PROVIDER"`
-	Chat     ChatConfig     `mapstructure:"CHAT"`
-	Auth     AuthConfig     `mapstructure:"AUTH"`
+	Server    ServerConfig    `mapstructure:"SERVER"`
+	Database  DatabaseConfig  `mapstructure:"DATABASE"`
+	Provider  ProviderConfig  `mapstructure:"PROVIDER"`
+	Chat      ChatConfig      `mapstructure:"CHAT"`
+	Auth      AuthConfig      `mapstructure:"AUTH"`
+	Telemetry TelemetryConfig `mapstructure:"TELEMETRY"`
+}
+
+type TelemetryConfig struct {
+	ProjectID string `mapstructure:"PROJECT_ID"`
 }
 
 type AuthConfig struct {
