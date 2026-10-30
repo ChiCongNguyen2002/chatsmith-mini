@@ -11,6 +11,8 @@ import (
 
 	"chatsmith-mini/constants"
 	"chatsmith-mini/pkg/failure"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const (
@@ -26,13 +28,13 @@ const (
 var errStreamEnded = errors.New("stream ended before completion")
 
 func NewHTTPClient() *http.Client {
-	return &http.Client{Transport: &http.Transport{
+	return &http.Client{Transport: otelhttp.NewTransport(&http.Transport{
 		ForceAttemptHTTP2:     true,
 		MaxIdleConnsPerHost:   maxIdleConnsPerHost,
 		IdleConnTimeout:       idleConnTimeout,
 		TLSHandshakeTimeout:   tlsHandshakeTimeout,
 		ResponseHeaderTimeout: responseHeaderTimeout,
-	}}
+	})}
 }
 
 type target struct {

@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/plugin/opentelemetry/tracing"
 )
 
 type PostgresDB = *gorm.DB
@@ -14,6 +15,10 @@ type PostgresDB = *gorm.DB
 func NewPostgres(cfg configs.DatabaseConfig) (PostgresDB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.URL), &gorm.Config{Logger: logger.NewGORM()})
 	if err != nil {
+		return nil, failure.ErrWithTrace(err)
+	}
+
+	if err := db.Use(tracing.NewPlugin(tracing.WithoutQueryVariables())); err != nil {
 		return nil, failure.ErrWithTrace(err)
 	}
 
