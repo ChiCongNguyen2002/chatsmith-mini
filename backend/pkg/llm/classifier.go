@@ -22,6 +22,7 @@ const (
 	verdictSearch       = "search"
 	logClassifierFailed = "classifier_failed"
 	contentTypeText     = "text"
+	thinkingDisabled    = "disabled"
 )
 
 var errNoVerdict = errors.New("classifier returned no text block")
@@ -47,10 +48,15 @@ func NewClassifier(cfg configs.ProviderConfig, chatCfg configs.ChatConfig, clien
 }
 
 type classifyBody struct {
-	Model     string    `json:"model"`
-	MaxTokens int       `json:"max_tokens"`
-	System    string    `json:"system"`
-	Messages  []Message `json:"messages"`
+	Model     string        `json:"model"`
+	MaxTokens int           `json:"max_tokens"`
+	System    string        `json:"system"`
+	Messages  []Message     `json:"messages"`
+	Thinking  thinkingParam `json:"thinking"`
+}
+
+type thinkingParam struct {
+	Type string `json:"type"`
 }
 
 type classifyResponse struct {
@@ -124,6 +130,7 @@ func (c *Classifier) newRequest(ctx context.Context, lastMessage string) (*http.
 		MaxTokens: classifierMaxTokens,
 		System:    c.prompt,
 		Messages:  []Message{{Role: "user", Content: lastMessage}},
+		Thinking:  thinkingParam{Type: thinkingDisabled},
 	})
 	if err != nil {
 		return nil, err
