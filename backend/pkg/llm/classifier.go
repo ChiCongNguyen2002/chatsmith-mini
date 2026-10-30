@@ -7,21 +7,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"time"
 
 	"chatsmith-mini/configs"
+	"chatsmith-mini/constants"
+	"chatsmith-mini/pkg/logger"
 )
 
 const (
 	classifierMaxTokens = 8
-	classifierMaxBody   = 1024
+	classifierMaxBody   = 64 << 10
+	classifierHeadBytes = 200
 	verdictSearch       = "search"
 	logClassifierFailed = "classifier_failed"
+	contentTypeText     = "text"
 )
 
-var errNoVerdict = errors.New("classifier returned no content")
+var errNoVerdict = errors.New("classifier returned no text block")
 
 type Classifier struct {
 	baseURL string
@@ -52,6 +55,7 @@ type classifyBody struct {
 
 type classifyResponse struct {
 	Content []struct {
+		Type string `json:"type"`
 		Text string `json:"text"`
 	} `json:"content"`
 }
@@ -62,7 +66,7 @@ func (c *Classifier) NeedsSearch(ctx context.Context, lastMessage string) bool {
 
 	verdict, err := c.verdict(classifyCtx, lastMessage)
 	if err != nil {
-		slog.Warn(logClassifierFailed, "error", err)
+		logger.FromContext(ctx).Warn(logClassifierFailed, constants.LogKeyError, err)
 
 		return true
 	}
@@ -82,24 +86,36 @@ func (c *Classifier) verdict(ctx context.Context, lastMessage string) (string, e
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("status %d", resp.StatusCode)
-	}
-
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, classifierMaxBody))
 	if err != nil {
 		return "", err
 	}
+	if resp.StatusCode != http.StatusOK {
+		return "", bodyError(resp.StatusCode, raw, errStatus)
+	}
 
 	var result classifyResponse
 	if err := json.Unmarshal(raw, &result); err != nil {
-		return "", err
+		return "", bodyError(resp.StatusCode, raw, err)
 	}
-	if len(result.Content) == 0 {
-		return "", errNoVerdict
+	for _, block := range result.Content {
+		if block.Type == contentTypeText {
+			return block.Text, nil
+		}
 	}
 
-	return result.Content[0].Text, nil
+	return "", bodyError(resp.StatusCode, raw, errNoVerdict)
+}
+
+var errStatus = errors.New("unexpected status")
+
+func bodyError(status int, raw []byte, cause error) error {
+	head := raw
+	if len(head) > classifierHeadBytes {
+		head = head[:classifierHeadBytes]
+	}
+
+	return fmt.Errorf("status=%d body_len=%d body_head=%q: %w", status, len(raw), head, cause)
 }
 
 func (c *Classifier) newRequest(ctx context.Context, lastMessage string) (*http.Request, error) {
