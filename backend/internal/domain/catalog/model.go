@@ -15,7 +15,7 @@ type Model struct {
 }
 
 func (Model) TableName() string {
-	return tableModels
+	return "models"
 }
 
 type ModelView struct {

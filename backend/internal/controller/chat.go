@@ -27,7 +27,7 @@ func (c *Chat) Send(ctx *gin.Context) {
 
 	var req chat.SendRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		respondErr(ctx, failure.New(failure.CodeBadRequest))
+		response.ErrFrom(ctx, failure.New(failure.CodeBadRequest))
 		return
 	}
 
@@ -39,7 +39,7 @@ func (c *Chat) Send(ctx *gin.Context) {
 		RequestID:      ctx.GetString(string(constants.ContextKeyRequestID)),
 	})
 	if err != nil {
-		respondErr(ctx, err)
+		response.ErrFrom(ctx, err)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (c *Chat) Continue(ctx *gin.Context) {
 		RequestID:      ctx.GetString(string(constants.ContextKeyRequestID)),
 	})
 	if err != nil {
-		respondErr(ctx, err)
+		response.ErrFrom(ctx, err)
 		return
 	}
 
@@ -63,13 +63,13 @@ func (c *Chat) Continue(ctx *gin.Context) {
 func (c *Chat) Messages(ctx *gin.Context) {
 	var query chat.MessageListQuery
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		respondErr(ctx, failure.New(failure.CodeBadRequest))
+		response.ErrFrom(ctx, failure.New(failure.CodeBadRequest))
 		return
 	}
 
 	items, err := c.service.ListMessages(ctx.Request.Context(), reqctx.UserID(ctx), ctx.Param(constants.ParamConversationID), query.AfterSeq, query.Limit)
 	if err != nil {
-		respondErr(ctx, err)
+		response.ErrFrom(ctx, err)
 		return
 	}
 

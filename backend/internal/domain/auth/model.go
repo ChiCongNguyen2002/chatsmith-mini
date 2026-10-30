@@ -14,7 +14,7 @@ type Session struct {
 }
 
 func (Session) TableName() string {
-	return tableSessions
+	return "sessions"
 }
 
 func (s Session) Expired(now time.Time) bool {

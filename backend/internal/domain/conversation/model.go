@@ -11,7 +11,7 @@ type Conversation struct {
 }
 
 func (Conversation) TableName() string {
-	return tableConversations
+	return "conversations"
 }
 
 type Page struct {

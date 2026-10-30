@@ -18,7 +18,7 @@ func NewCatalog(service *catalog.Service) *Catalog {
 func (c *Catalog) Models(ctx *gin.Context) {
 	result, err := c.service.List(ctx.Request.Context())
 	if err != nil {
-		respondErr(ctx, err)
+		response.ErrFrom(ctx, err)
 		return
 	}
 

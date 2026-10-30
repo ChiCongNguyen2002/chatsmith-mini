@@ -20,7 +20,7 @@ func newRepo(db databases.PostgresDB) *Repo {
 
 func (r *Repo) List(ctx context.Context) ([]Model, error) {
 	var items []Model
-	if err := r.db.WithContext(ctx).Where(whereEnabled, true).Order(orderCatalog).Find(&items).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("enabled = ?", true).Order("sort_order, id").Find(&items).Error; err != nil {
 		return nil, failure.ErrWithTrace(err)
 	}
 
@@ -29,7 +29,7 @@ func (r *Repo) List(ctx context.Context) ([]Model, error) {
 
 func (r *Repo) Get(ctx context.Context, id string) (*Model, error) {
 	var item Model
-	err := r.db.WithContext(ctx).Where(whereEnabledByID, true, id).Take(&item).Error
+	err := r.db.WithContext(ctx).Where("enabled = ? AND id = ?", true, id).Take(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, failure.New(failure.CodeModelUnavailable)
 	}
