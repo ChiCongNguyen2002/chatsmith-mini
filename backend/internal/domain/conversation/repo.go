@@ -31,7 +31,7 @@ func (r *Repo) Create(ctx context.Context, userID, title string) (*Conversation,
 
 func (r *Repo) Get(ctx context.Context, conversationID, userID string) (*Conversation, error) {
 	var item Conversation
-	err := r.db.WithContext(ctx).Where(whereOwned, conversationID, userID).Take(&item).Error
+	err := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", conversationID, userID).Take(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, failure.New(failure.CodeNotFound)
 	}
@@ -43,9 +43,9 @@ func (r *Repo) Get(ctx context.Context, conversationID, userID string) (*Convers
 }
 
 func (r *Repo) List(ctx context.Context, userID string, limit int, after *pagination.Keyset) ([]Conversation, error) {
-	query := r.db.WithContext(ctx).Where(whereUserConversations, userID).Order(orderNewestFirst).Limit(limit)
+	query := r.db.WithContext(ctx).Where("user_id = ?", userID).Order("updated_at DESC, id DESC").Limit(limit)
 	if after != nil {
-		query = query.Where(whereBeforeCursor, time.UnixMicro(after.Micro).UTC(), after.ID)
+		query = query.Where("(updated_at, id) < (?, ?)", time.UnixMicro(after.Micro).UTC(), after.ID)
 	}
 
 	items := make([]Conversation, 0, limit)
@@ -57,7 +57,7 @@ func (r *Repo) List(ctx context.Context, userID string, limit int, after *pagina
 }
 
 func (r *Repo) Delete(ctx context.Context, conversationID, userID string) error {
-	result := r.db.WithContext(ctx).Where(whereOwned, conversationID, userID).Delete(&Conversation{})
+	result := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", conversationID, userID).Delete(&Conversation{})
 	if result.Error != nil {
 		return failure.ErrWithTrace(result.Error)
 	}
@@ -69,7 +69,7 @@ func (r *Repo) Delete(ctx context.Context, conversationID, userID string) error 
 }
 
 func (r *Repo) UpdateTitle(ctx context.Context, conversationID, userID, title string) error {
-	result := r.db.WithContext(ctx).Model(&Conversation{}).Where(whereOwned, conversationID, userID).Update("title", title)
+	result := r.db.WithContext(ctx).Model(&Conversation{}).Where("id = ? AND user_id = ?", conversationID, userID).Update("title", title)
 	if result.Error != nil {
 		return failure.ErrWithTrace(result.Error)
 	}

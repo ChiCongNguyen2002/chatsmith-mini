@@ -43,7 +43,8 @@ func (r *Repo) BeginTurn(ctx context.Context, conversationID, content, title, mo
 			return err
 		}
 
-		return tx.Exec(touchConversationSQL, title, conversationID).Error
+		return tx.Exec("UPDATE conversations SET updated_at = now(), title = CASE WHEN title = '' THEN ? ELSE title END WHERE id = ?",
+			title, conversationID).Error
 	})
 	if isUniqueViolation(err) {
 		return user, assistant, failure.New(failure.CodeConversationBusy)
@@ -61,13 +62,13 @@ func (r *Repo) BeginContinue(ctx context.Context, truncated Message, staleBefore
 		if err := failStale(tx, truncated.ConversationID, staleBefore); err != nil {
 			return err
 		}
-		res := tx.Exec(updateStatusSQL, StatusStreaming, truncated.ID, StatusTruncated)
+		res := tx.Exec("UPDATE messages SET status = ? WHERE id = ? AND status = ?", StatusStreaming, truncated.ID, StatusTruncated)
 		if res.Error != nil {
 			return res.Error
 		}
 		affected = res.RowsAffected
 
-		return tx.Exec(touchOnlySQL, truncated.ConversationID).Error
+		return tx.Exec("UPDATE conversations SET updated_at = now() WHERE id = ?", truncated.ConversationID).Error
 	})
 	if isUniqueViolation(err) {
 		return truncated, failure.New(failure.CodeConversationBusy)
@@ -85,7 +86,7 @@ func (r *Repo) BeginContinue(ctx context.Context, truncated Message, staleBefore
 
 func (r *Repo) LatestMessage(ctx context.Context, conversationID string) (Message, error) {
 	var item Message
-	err := r.db.WithContext(ctx).Where(whereConversationRows, conversationID).Order(orderNewestSeqFirst).Limit(1).Find(&item).Error
+	err := r.db.WithContext(ctx).Where("conversation_id = ?", conversationID).Order("seq DESC").Limit(1).Find(&item).Error
 	if err != nil {
 		return item, failure.ErrWithTrace(err)
 	}
@@ -96,9 +97,9 @@ func (r *Repo) LatestMessage(ctx context.Context, conversationID string) (Messag
 func (r *Repo) History(ctx context.Context, conversationID string, beforeSeq int64) ([]Message, error) {
 	items := make([]Message, 0, maxHistoryRows)
 	err := r.db.WithContext(ctx).
-		Select(columnRole, columnContent).
-		Where(whereHistory, conversationID, []MessageStatus{StatusCompleted, StatusTruncated}, beforeSeq).
-		Order(orderNewestSeqFirst).
+		Select("role", "content").
+		Where("conversation_id = ? AND status IN ? AND seq < ?", conversationID, []MessageStatus{StatusCompleted, StatusTruncated}, beforeSeq).
+		Order("seq DESC").
 		Limit(maxHistoryRows).
 		Find(&items).Error
 	if err != nil {
@@ -111,7 +112,7 @@ func (r *Repo) History(ctx context.Context, conversationID string, beforeSeq int
 
 func (r *Repo) ListMessages(ctx context.Context, conversationID string, afterSeq int64, limit int) ([]Message, error) {
 	items := make([]Message, 0, limit)
-	err := r.db.WithContext(ctx).Where(whereMessagesAfterSeq, conversationID, afterSeq).Order(orderOldestFirst).Limit(limit).Find(&items).Error
+	err := r.db.WithContext(ctx).Where("conversation_id = ? AND seq > ?", conversationID, afterSeq).Order("seq ASC").Limit(limit).Find(&items).Error
 	if err != nil {
 		return nil, failure.ErrWithTrace(err)
 	}
@@ -125,13 +126,16 @@ func (r *Repo) FinishMessage(ctx context.Context, in FinishInput) error {
 		return failure.ErrWithTrace(err)
 	}
 	err = r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Exec(finishMessageSQL, in.Content, in.Status, in.Usage.InputTokens, in.Usage.OutputTokens, in.CostMicroUSD,
+		err := tx.Exec(`UPDATE messages
+SET content = ?, status = ?, input_tokens = ?, output_tokens = ?, cost_micro_usd = ?,
+    usage_estimated = ?, first_token_ms = ?, latency_ms = ?, sources = COALESCE(?, sources)
+WHERE id = ?`, in.Content, in.Status, in.Usage.InputTokens, in.Usage.OutputTokens, in.CostMicroUSD,
 			in.Usage.Estimated, in.FirstTokenMS, in.LatencyMS, sources, in.MessageID).Error
 		if err != nil {
 			return err
 		}
 
-		return tx.Exec(touchOnlySQL, in.ConversationID).Error
+		return tx.Exec("UPDATE conversations SET updated_at = now() WHERE id = ?", in.ConversationID).Error
 	})
 	if err != nil {
 		return failure.ErrWithTrace(err)
@@ -142,7 +146,7 @@ func (r *Repo) FinishMessage(ctx context.Context, in FinishInput) error {
 
 func (r *Repo) SpentSince(ctx context.Context, since time.Time) (int64, error) {
 	var total int64
-	err := r.db.WithContext(ctx).Model(&Message{}).Select(selectSumCost).Where(whereSpent, RoleAssistant, since).Scan(&total).Error
+	err := r.db.WithContext(ctx).Model(&Message{}).Select("COALESCE(SUM(cost_micro_usd), 0)").Where("role = ? AND created_at >= ?", RoleAssistant, since).Scan(&total).Error
 	if err != nil {
 		return 0, failure.ErrWithTrace(err)
 	}
@@ -151,14 +155,14 @@ func (r *Repo) SpentSince(ctx context.Context, since time.Time) (int64, error) {
 }
 
 func failStale(tx *gorm.DB, conversationID string, staleBefore time.Time) error {
-	stale := tx.Model(&Message{}).Where(whereStaleStreaming, conversationID, StatusStreaming, staleBefore)
+	stale := tx.Model(&Message{}).Where("conversation_id = ? AND status = ? AND created_at < ?", conversationID, StatusStreaming, staleBefore)
 
-	return stale.Update(columnStatus, StatusFailed).Error
+	return stale.Update("status", StatusFailed).Error
 }
 
 func lastSeq(tx *gorm.DB, conversationID string) (int64, error) {
 	var maxSeq int64
-	err := tx.Model(&Message{}).Select(selectMaxSeq).Where(whereConversationRows, conversationID).Scan(&maxSeq).Error
+	err := tx.Model(&Message{}).Select("COALESCE(MAX(seq), 0)").Where("conversation_id = ?", conversationID).Scan(&maxSeq).Error
 
 	return maxSeq, err
 }

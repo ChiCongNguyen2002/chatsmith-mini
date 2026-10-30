@@ -15,7 +15,7 @@ type User struct {
 }
 
 func (User) TableName() string {
-	return tableUsers
+	return "users"
 }
 
 type Identity struct {
@@ -37,5 +37,5 @@ type identityRow struct {
 }
 
 func (identityRow) TableName() string {
-	return tableIdentities
+	return "user_identities"
 }

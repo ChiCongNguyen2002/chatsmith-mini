@@ -34,7 +34,7 @@ func NewAuth(service *auth.Service, cfg configs.AuthConfig) *Auth {
 func (a *Auth) Login(ctx *gin.Context) {
 	redirectURL, stateToken, err := a.service.StartLogin(providerParam(ctx))
 	if err != nil {
-		respondErr(ctx, err)
+		response.ErrFrom(ctx, err)
 		return
 	}
 
@@ -45,13 +45,13 @@ func (a *Auth) Login(ctx *gin.Context) {
 func (a *Auth) Callback(ctx *gin.Context) {
 	stateToken, err := ctx.Cookie(auth.CookieState)
 	if err != nil {
-		respondErr(ctx, failure.New(failure.CodeUnauthorized))
+		response.ErrFrom(ctx, failure.New(failure.CodeUnauthorized))
 		return
 	}
 
 	sessionToken, err := a.service.FinishLogin(ctx.Request.Context(), providerParam(ctx), stateToken, ctx.Query(queryState), ctx.Query(queryCode))
 	if err != nil {
-		respondErr(ctx, err)
+		response.ErrFrom(ctx, err)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (a *Auth) Callback(ctx *gin.Context) {
 func (a *Auth) Logout(ctx *gin.Context) {
 	if token, err := ctx.Cookie(auth.CookieSession); err == nil {
 		if err := a.service.Logout(ctx.Request.Context(), token); err != nil {
-			respondErr(ctx, err)
+			response.ErrFrom(ctx, err)
 			return
 		}
 	}
@@ -75,7 +75,7 @@ func (a *Auth) Logout(ctx *gin.Context) {
 func (a *Auth) Me(ctx *gin.Context) {
 	account, err := a.service.Me(ctx.Request.Context(), reqctx.UserID(ctx))
 	if err != nil {
-		respondErr(ctx, err)
+		response.ErrFrom(ctx, err)
 		return
 	}
 

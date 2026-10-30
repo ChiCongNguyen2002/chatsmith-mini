@@ -20,7 +20,7 @@ func newRepo(db databases.PostgresDB) *Repo {
 
 func (r *Repo) Get(ctx context.Context, userID string) (*User, error) {
 	var item User
-	err := r.db.WithContext(ctx).Where(whereUserID, userID).Take(&item).Error
+	err := r.db.WithContext(ctx).Where("id = ?", userID).Take(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, failure.New(failure.CodeUnauthorized)
 	}
@@ -32,17 +32,17 @@ func (r *Repo) Get(ctx context.Context, userID string) (*User, error) {
 }
 
 func (r *Repo) FindByIdentity(ctx context.Context, provider, subject string) (*User, error) {
-	return r.findJoined(ctx, whereIdentity, provider, subject)
+	return r.findJoined(ctx, "user_identities.provider = ? AND user_identities.subject = ?", provider, subject)
 }
 
 func (r *Repo) FindByVerifiedEmail(ctx context.Context, email string) (*User, error) {
-	return r.findJoined(ctx, whereVerifiedEmail, email)
+	return r.findJoined(ctx, "user_identities.email = ? AND user_identities.email_verified = true", email)
 }
 
 func (r *Repo) findJoined(ctx context.Context, where string, args ...any) (*User, error) {
 	var item User
-	err := r.db.WithContext(ctx).Model(&User{}).Select(selectUserColumns).
-		Joins(joinIdentityUser).Where(where, args...).Take(&item).Error
+	err := r.db.WithContext(ctx).Model(&User{}).Select("users.*").
+		Joins("JOIN user_identities ON user_identities.user_id = users.id").Where(where, args...).Take(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -82,7 +82,8 @@ func (r *Repo) AddIdentity(ctx context.Context, userID string, identity Identity
 }
 
 func (r *Repo) RefreshProfile(ctx context.Context, userID string, identity Identity) error {
-	err := r.db.WithContext(ctx).Exec(updateProfileSQL, identity.Email, identity.Name, identity.Picture, userID).Error
+	err := r.db.WithContext(ctx).Exec("UPDATE users SET email = ?, name = ?, picture = ? WHERE id = ?",
+		identity.Email, identity.Name, identity.Picture, userID).Error
 	if err != nil {
 		return failure.ErrWithTrace(err)
 	}

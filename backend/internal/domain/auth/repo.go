@@ -28,7 +28,7 @@ func (r *Repo) Create(ctx context.Context, session Session) error {
 
 func (r *Repo) Find(ctx context.Context, tokenHash string) (*Session, error) {
 	var item Session
-	err := r.db.WithContext(ctx).Where(whereSession, tokenHash).Take(&item).Error
+	err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).Take(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -40,7 +40,7 @@ func (r *Repo) Find(ctx context.Context, tokenHash string) (*Session, error) {
 }
 
 func (r *Repo) Delete(ctx context.Context, tokenHash string) error {
-	if err := r.db.WithContext(ctx).Where(whereSession, tokenHash).Delete(&Session{}).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).Delete(&Session{}).Error; err != nil {
 		return failure.ErrWithTrace(err)
 	}
 

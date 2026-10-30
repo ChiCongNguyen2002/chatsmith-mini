@@ -27,7 +27,7 @@ type Message struct {
 }
 
 func (Message) TableName() string {
-	return tableMessages
+	return "messages"
 }
 
 type Usage struct {
