@@ -41,6 +41,7 @@ const (
 	KeyAuthSessionTTL           = "AUTH.SESSION_TTL"
 	KeyAuthStateTTL             = "AUTH.STATE_TTL"
 	KeyAuthCookieSecure         = "AUTH.COOKIE_SECURE"
+	KeyTelemetryProjectID       = "TELEMETRY.PROJECT_ID"
 )
 
 const (

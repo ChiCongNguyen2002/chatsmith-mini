@@ -49,4 +49,15 @@ const (
 	logKeyLatency     = "latency_ms"
 	logKeyEstimated   = "usage_estimated"
 	logKeyConvID      = "conversation_id"
+
+	chatMeterName      = "chatsmith/chat"
+	metricChatOutcome  = "chat.outcome"
+	metricChatDuration = "chat.duration"
+	attrStatus         = "status"
+	attrReason         = "reason"
+	attrModel          = "model"
+	statusRejected     = "rejected"
+	modelUnknown       = "unknown"
 )
+
+var chatDurationBuckets = []float64{0.25, 0.5, 1, 1.5, 2, 3, 5, 10, 20, 60, 120}
