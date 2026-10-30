@@ -4,10 +4,12 @@ import (
 	"log/slog"
 	"time"
 
+	"chatsmith-mini/constants"
 	"chatsmith-mini/internal/controller"
 	"chatsmith-mini/internal/middleware"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 const routeV1 = "/v1"
@@ -28,7 +30,7 @@ func NewEngine(log *slog.Logger, requestTimeout time.Duration, session gin.Handl
 	}
 
 	engine := gin.New()
-	engine.Use(middleware.RequestID(log), middleware.AccessLog(), httpMetrics, middleware.Recovery())
+	engine.Use(otelgin.Middleware(constants.ServiceName), middleware.RequestID(log), middleware.AccessLog(), httpMetrics, middleware.Recovery())
 
 	registerWeb(engine, h.Web)
 	registerHealth(engine, h.Health)
