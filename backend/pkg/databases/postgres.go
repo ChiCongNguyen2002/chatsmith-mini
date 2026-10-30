@@ -18,7 +18,7 @@ func NewPostgres(cfg configs.DatabaseConfig) (PostgresDB, error) {
 		return nil, failure.ErrWithTrace(err)
 	}
 
-	if err := db.Use(tracing.NewPlugin(tracing.WithoutQueryVariables())); err != nil {
+	if err := db.Use(tracing.NewPlugin(tracing.WithoutQueryVariables(), tracing.WithoutMetrics())); err != nil {
 		return nil, failure.ErrWithTrace(err)
 	}
 
