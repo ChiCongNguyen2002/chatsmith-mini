@@ -37,5 +37,5 @@ type identityRow struct {
 }
 
 func (identityRow) TableName() string {
-	return "user_identities"
+	return "auth_identities"
 }

@@ -87,14 +87,20 @@ Nếu `--gcs-source-staging-dir` báo lỗi bucket, dùng `docker build -f Docke
 
 ## 9. Migration
 
-Migration chạy một lần, bằng Cloud SQL Auth Proxy trên máy:
+Migration chạy bằng Cloud SQL Auth Proxy trên máy. Mỗi file chỉ chạy một lần:
 
 ```bash
 cloud-sql-proxy ${PROJECT}:${REGION}:${DB_INSTANCE} --port 5433 &
-for f in backend/migrations/*.sql; do psql "postgres://chatsmith:<mật khẩu>@127.0.0.1:5433/chatsmith" -f "$f"; done
+psql "postgres://chatsmith:<mật khẩu>@127.0.0.1:5433/chatsmith" -f backend/migrations/<file>.sql
 ```
 
-Chỉ chạy lại một file khi biết chắc nó chưa áp dụng. Các file không có `IF NOT EXISTS`.
+Đổi tên bảng chạy theo ba bước, không chạy cả thư mục một lúc:
+
+1. `202611010900_rename_tables_expand.sql`: chạy **trước** khi deploy code mới. Code cũ vẫn chạy nhờ view tên cũ.
+2. Deploy code mới (push `main`), chờ revision mới nhận 100% traffic.
+3. `202611011000_rename_tables_contract.sql`: chạy **sau** bước 2. Xoá view tên cũ.
+
+Không chạy file 3 trước khi bước 2 xong, vì binary cũ còn đang đọc tên bảng cũ.
 
 ## 10. Deploy Cloud Run (GUI)
 

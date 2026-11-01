@@ -27,11 +27,11 @@ func (s *Service) List(ctx context.Context) (*Catalog, error) {
 	byProvider := make(map[constants.Provider][]ModelView, len(providerOrder))
 	for _, m := range models {
 		byProvider[m.Provider] = append(byProvider[m.Provider], ModelView{
-			ID:          m.ID,
+			ID:          m.Code,
 			Name:        m.DisplayName,
 			Description: m.Description,
 			IsNew:       m.IsNew,
-			IsDefault:   m.ID == s.defaultModel,
+			IsDefault:   m.Code == s.defaultModel,
 			Available:   s.available(m.Provider),
 			InputMicro:  m.InputMicro,
 			OutputMicro: m.OutputMicro,
