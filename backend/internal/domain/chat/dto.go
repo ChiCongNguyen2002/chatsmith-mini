@@ -115,7 +115,7 @@ func newCreatedEvent(turn *Turn) CreatedEvent {
 	return CreatedEvent{
 		ConversationID:   turn.ConversationID,
 		UserMessage:      MessageRef{ID: turn.UserMessage.ID, Seq: turn.UserMessage.Seq},
-		AssistantMessage: AssistantRef{ID: turn.Assistant.ID, Seq: turn.Assistant.Seq, Model: turn.Model.ID},
+		AssistantMessage: AssistantRef{ID: turn.Assistant.ID, Seq: turn.Assistant.Seq, Model: turn.Model.Code},
 	}
 }
 
@@ -123,7 +123,7 @@ func newCompletedEvent(turn *Turn, status MessageStatus, usage Usage, costMicro 
 	return CompletedEvent{
 		MessageID:    turn.Assistant.ID,
 		Status:       status,
-		Model:        turn.Model.ID,
+		Model:        turn.Model.Code,
 		Usage:        newUsageResponse(usage),
 		CostMicroUSD: costMicro,
 		FirstTokenMS: firstTokenMS,

@@ -72,25 +72,25 @@ func (s *Service) Start(ctx context.Context, in StartInput) (*Turn, error) {
 		return nil, s.reject(ctx, modelUnknown, err)
 	}
 	if _, ok := s.streamers[model.Provider]; !ok {
-		return nil, s.reject(ctx, model.ID, failure.New(failure.CodeModelUnavailable))
+		return nil, s.reject(ctx, model.Code, failure.New(failure.CodeModelUnavailable))
 	}
 	if _, err := s.conversations.Get(ctx, in.UserID, in.ConversationID); err != nil {
-		return nil, s.reject(ctx, model.ID, err)
+		return nil, s.reject(ctx, model.Code, err)
 	}
 	if err := s.checkBudget(ctx); err != nil {
-		return nil, s.reject(ctx, model.ID, err)
+		return nil, s.reject(ctx, model.Code, err)
 	}
 
 	staleBefore := time.Now().Add(-(s.cfg.Timeout + staleAfterMargin))
-	user, assistant, err := s.repo.BeginTurn(ctx, in.ConversationID, content, prompt.Title(content), model.ID, staleBefore)
+	user, assistant, err := s.repo.BeginTurn(ctx, in.ConversationID, content, prompt.Title(content), model.Code, staleBefore)
 	if err != nil {
-		return nil, s.reject(ctx, model.ID, err)
+		return nil, s.reject(ctx, model.Code, err)
 	}
 
 	history, err := s.repo.History(ctx, in.ConversationID, assistant.Seq)
 	if err != nil {
 		s.abandon(ctx, in.ConversationID, assistant.ID)
-		return nil, s.reject(ctx, model.ID, err)
+		return nil, s.reject(ctx, model.Code, err)
 	}
 
 	return &Turn{
@@ -119,7 +119,7 @@ func (s *Service) Continue(ctx context.Context, in ContinueInput) (*Turn, error)
 	staleBefore := time.Now().Add(-(s.cfg.Timeout + staleAfterMargin))
 	assistant, err := s.repo.BeginContinue(ctx, last, staleBefore)
 	if err != nil {
-		return nil, s.reject(ctx, model.ID, err)
+		return nil, s.reject(ctx, model.Code, err)
 	}
 
 	history, err := s.repo.History(ctx, in.ConversationID, last.Seq)
@@ -168,7 +168,7 @@ func (s *Service) generate(genCtx context.Context, turn *Turn, emit Emit, starte
 	var text strings.Builder
 	webSearch := turn.Prior == nil && s.cfg.WebSearch && s.classifier.NeedsSearch(genCtx, turn.UserMessage.Content)
 	out.result, out.streamErr = s.streamers[turn.Model.Provider].Stream(genCtx, llm.Request{
-		Model:            turn.Model.ID,
+		Model:            turn.Model.ProviderModel,
 		Messages:         toLLM(turn.Prompt),
 		MaxOutputTokens:  s.cfg.MaxOutputTokens,
 		SystemPrompt:     s.cfg.SystemPrompt,
@@ -249,18 +249,18 @@ func (s *Service) save(ctx context.Context, turn *Turn, out reply, res outcome) 
 func (s *Service) report(ctx context.Context, turn *Turn, emit Emit, out reply, res outcome, saveErr error) {
 	log := logger.FromContext(ctx)
 	if out.streamErr != nil && res.status == StatusFailed {
-		log.Error(logChatFailed, constants.LogKeyError, out.streamErr, logKeyModel, turn.Model.ID, logKeyConvID, turn.ConversationID)
+		log.Error(logChatFailed, constants.LogKeyError, out.streamErr, logKeyModel, turn.Model.Code, logKeyConvID, turn.ConversationID)
 	}
 	latency := time.Duration(res.latencyMS) * time.Millisecond
 	if saveErr != nil {
 		log.Error(logChatNotSaved, constants.LogKeyError, saveErr, logKeyConvID, turn.ConversationID)
-		s.metrics.record(ctx, turn.Model.ID, StatusFailed, failure.CodeInternal, latency)
+		s.metrics.record(ctx, turn.Model.Code, StatusFailed, failure.CodeInternal, latency)
 		_ = emit(EventFailed, newFailedEvent(turn, failure.CodeInternal))
 
 		return
 	}
 	logFinished(log, turn, res, out.firstTokenMS)
-	s.metrics.record(ctx, turn.Model.ID, res.status, res.reason, latency)
+	s.metrics.record(ctx, turn.Model.Code, res.status, res.reason, latency)
 
 	switch res.status {
 	case StatusCompleted, StatusTruncated:
@@ -412,7 +412,7 @@ func toLLM(items []prompt.Message) []llm.Message {
 
 func logFinished(log *slog.Logger, turn *Turn, res outcome, firstTokenMS int) {
 	log.Info(logChatFinished,
-		logKeyModel, turn.Model.ID,
+		logKeyModel, turn.Model.Code,
 		logKeyStatus, res.status,
 		logKeyInputTokens, res.usage.InputTokens,
 		logKeyOutputToken, res.usage.OutputTokens,

@@ -32,17 +32,17 @@ func (r *Repo) Get(ctx context.Context, userID string) (*User, error) {
 }
 
 func (r *Repo) FindByIdentity(ctx context.Context, provider, subject string) (*User, error) {
-	return r.findJoined(ctx, "user_identities.provider = ? AND user_identities.subject = ?", provider, subject)
+	return r.findJoined(ctx, "auth_identities.provider = ? AND auth_identities.subject = ?", provider, subject)
 }
 
 func (r *Repo) FindByVerifiedEmail(ctx context.Context, email string) (*User, error) {
-	return r.findJoined(ctx, "user_identities.email = ? AND user_identities.email_verified = true", email)
+	return r.findJoined(ctx, "auth_identities.email = ? AND auth_identities.email_verified = true", email)
 }
 
 func (r *Repo) findJoined(ctx context.Context, where string, args ...any) (*User, error) {
 	var item User
 	err := r.db.WithContext(ctx).Model(&User{}).Select("users.*").
-		Joins("JOIN user_identities ON user_identities.user_id = users.id").Where(where, args...).Take(&item).Error
+		Joins("JOIN auth_identities ON auth_identities.user_id = users.id").Where(where, args...).Take(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
